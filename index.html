@@ -187,6 +187,12 @@
   .funnel-drop.over { border-color: var(--accent); background: rgba(108,140,255,.08); }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 8px; }
 
+  .done-card { grid-column: 1 / -1; }
+  .clear-done { font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: underline; }
+  .clear-done:hover { color: var(--accent-2); }
+  li.done-item { border-left: 3px solid var(--good); }
+  li.done-item .done-check { color: var(--good); font-size: 15px; font-weight: 700; }
+  li.done-item .when { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
   .timer-card { grid-column: 1 / -1; text-align: center; }
   .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 4px; min-height: 18px; }
   .timer-task { font-size: 18px; font-weight: 600; margin: 2px 0 10px; min-height: 24px; }
@@ -302,6 +308,14 @@
       </label>
     </div>
   </section>
+
+  <!-- Done / completed -->
+  <section class="card done-card">
+    <h2>Done <span class="count" id="doneCount">0</span></h2>
+    <p class="hint">Tasks you finished land here, newest first. Hit <b>↩ Restore</b> if you finished one by mistake. · <span class="clear-done" id="clearDone" title="Remove all finished tasks">clear finished</span></p>
+    <ul class="list" id="doneList"></ul>
+    <div class="empty" id="doneEmpty">Nothing finished yet — run the timer and hit “✓ Finish top task”.</div>
+  </section>
 </div>
 
 <footer>
@@ -328,7 +342,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
+    return { dump: [], today: [], done: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -339,6 +353,7 @@
     if (!p || typeof p !== "object") return s;
     if (Array.isArray(p.dump)) s.dump = p.dump.map(normalizeTask);
     if (Array.isArray(p.today)) s.today = p.today.map(normalizeTask);
+    if (Array.isArray(p.done)) s.done = p.done.map(normalizeDone);
     if (p.mode) s.mode = p.mode;
     if (p.theme) s.theme = p.theme;
     if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
@@ -369,13 +384,20 @@
       }) : []
     };
   }
+  // A finished task, plus the date it was completed (for restore / display).
+  function normalizeDone(t) {
+    var n = normalizeTask(t);
+    n.done = true;
+    n.doneDate = (typeof t.doneDate === "string" && t.doneDate) ? t.doneDate : todayKey();
+    return n;
+  }
   function uid() {
     return "t" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
   }
 
   // ---- DOM refs ----
   var $ = function (id) { return document.getElementById(id); };
-  var dumpEl = $("dump"), todayEl = $("today"), todayDrop = $("todayDrop");
+  var dumpEl = $("dump"), todayEl = $("today"), todayDrop = $("todayDrop"), doneEl = $("doneList");
   var dumpInput = $("dumpInput"), dumpEst = $("dumpEst");
 
   // ---- List helpers ----
@@ -465,10 +487,10 @@
     return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
   }
   function todayKey() { return keyOf(new Date()); }
-  function recordCompletion(delta) {
-    var k = todayKey();
+  function recordCompletionOn(k, delta) {
     state.stats.dates[k] = Math.max(0, (state.stats.dates[k] || 0) + delta);
   }
+  function recordCompletion(delta) { recordCompletionOn(todayKey(), delta); }
   function completedToday() { return state.stats.dates[todayKey()] || 0; }
   function computeStreak() {
     var dates = state.stats.dates;
@@ -587,6 +609,42 @@
     return li;
   }
 
+  function makeDoneEl(t) {
+    var li = document.createElement("li");
+    li.className = "task done-item";
+    li.dataset.id = t.id;
+    var row = document.createElement("div");
+    row.className = "row";
+    row.style.cursor = "default";
+
+    var chk = document.createElement("span"); chk.className = "done-check"; chk.textContent = "✓"; row.appendChild(chk);
+
+    var label = document.createElement("span");
+    label.className = "label done";
+    label.textContent = t.text;
+    row.appendChild(label);
+
+    var when = document.createElement("span");
+    when.className = "when";
+    when.textContent = t.doneDate === todayKey() ? "today" : (t.doneDate || "");
+    row.appendChild(when);
+
+    var restore = document.createElement("button");
+    restore.className = "mini";
+    restore.textContent = "↩ Restore";
+    restore.title = "Move back to Brain Dump (un-finish)";
+    restore.addEventListener("click", function () { restoreDone(t.id); });
+    row.appendChild(restore);
+
+    var x = document.createElement("button");
+    x.className = "x"; x.textContent = "×"; x.title = "Remove from list (keeps your streak)";
+    x.addEventListener("click", function () { deleteDone(t.id); });
+    row.appendChild(x);
+
+    li.appendChild(row);
+    return li;
+  }
+
   function render() {
     dumpEl.innerHTML = "";
     state.dump.forEach(function (t) { dumpEl.appendChild(makeTaskEl(t, false, false)); });
@@ -594,10 +652,15 @@
     todayEl.innerHTML = "";
     state.today.forEach(function (t, i) { todayEl.appendChild(makeTaskEl(t, true, i === 0)); });
 
+    doneEl.innerHTML = "";
+    state.done.forEach(function (t) { doneEl.appendChild(makeDoneEl(t)); });
+
     $("dumpCount").textContent = state.dump.length;
     var totalMin = state.today.reduce(function (a, t) { return a + (t.est || 0); }, 0);
     $("todayCount").textContent = state.today.length + " / " + MAX_TODAY + (totalMin ? " · ~" + totalMin + "m" : "");
     $("todayEmpty").style.display = state.today.length ? "none" : "block";
+    $("doneCount").textContent = state.done.length;
+    $("doneEmpty").style.display = state.done.length ? "none" : "block";
 
     renderStats();
     updateTimerTask();
@@ -832,8 +895,31 @@
     var t = topTask(); if (!t) return;
     if (!t.done) recordCompletion(1);
     removeFromAll(t.id);
+    t.done = true;
+    t.doneDate = todayKey();
+    state.done.unshift(t);            // newest first, kept so you can see/restore it
     save(); render(); resetTimer();
     if (state.mode !== "focus") setMode("focus");
+  }
+  function restoreDone(id) {
+    var i = indexById(state.done, id);
+    if (i < 0) return;
+    var t = state.done.splice(i, 1)[0];
+    recordCompletionOn(t.doneDate || todayKey(), -1); // undo the completion credit
+    t.done = false;
+    delete t.doneDate;
+    state.dump.push(t);               // back into the Brain Dump
+    save(); render();
+  }
+  function deleteDone(id) {           // remove from the archive but KEEP the completion credit
+    var i = indexById(state.done, id);
+    if (i >= 0) { state.done.splice(i, 1); save(); render(); }
+  }
+  function clearDoneList() {
+    if (!state.done.length) return;
+    if (!confirm("Remove all finished tasks from the Done list? (Your streak/count stays.)")) return;
+    state.done = [];
+    save(); render();
   }
 
   // ---- Theme ----
@@ -903,9 +989,10 @@
 
   $("clearAll").addEventListener("click", function () {
     if (!confirm("Clear all tasks and reset the timer? (Your streak history stays.)")) return;
-    state.dump = []; state.today = []; state.mode = "focus";
+    state.dump = []; state.today = []; state.done = []; state.mode = "focus";
     save(); setMode("focus"); render();
   });
+  $("clearDone").addEventListener("click", clearDoneList);
 
   // ---- Export / Import (JSON backup) ----
   function exportData() {

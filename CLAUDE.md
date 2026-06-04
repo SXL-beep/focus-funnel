@@ -36,6 +36,9 @@ sound. Built for personal daily use.
 - **Time estimates** per task (minutes); Today header sums them.
 - **Pomodoro timer** — Focus 25 / Break 5 / Long 15 modes. Spacebar toggles start/pause.
 - **Completed-today counter & streak** (consecutive days with >=1 completion).
+- **Done list** — finishing the top task archives it to `state.done` (newest first) instead
+  of deleting it; each item can be **↩ Restored** (un-finishes, returns to Brain Dump,
+  decrements the completion credit for its `doneDate`) or removed (keeps the credit).
 - **Ambient focus sound** while the timer runs — selectable: brown noise / rain / ocean /
   ticking clock — plus a volume slider. All synthesized live via WebAudio (no asset files).
 - **Alarm** (two-tone WebAudio) when a session ends.
