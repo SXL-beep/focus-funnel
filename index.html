@@ -216,6 +216,8 @@
 
   footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 30px; }
   .reset-link { color: var(--muted); text-decoration: underline; cursor: pointer; }
+  .backup-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 12px; }
+  .backup-row button { padding: 8px 13px; font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -288,6 +290,11 @@
 </div>
 
 <footer>
+  <div class="backup-row">
+    <button class="ghost" id="exportBtn">⬇️ Export backup</button>
+    <button class="ghost" id="importBtn">⬆️ Import backup</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden />
+  </div>
   Everything saves to this browser automatically · <span class="reset-link" id="clearAll">clear all data</span>
 </footer>
 
@@ -311,23 +318,29 @@
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   }
-  function loadState() {
+  // Build a clean, validated state from any parsed object (used by load + import).
+  function fromObject(p) {
     var s = defaults();
+    if (!p || typeof p !== "object") return s;
+    if (Array.isArray(p.dump)) s.dump = p.dump.map(normalizeTask);
+    if (Array.isArray(p.today)) s.today = p.today.map(normalizeTask);
+    if (p.mode) s.mode = p.mode;
+    if (p.theme) s.theme = p.theme;
+    if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
+    if (p.soundType) s.soundType = p.soundType;
+    if (typeof p.volume === "number") s.volume = Math.min(1, Math.max(0, p.volume));
+    if (p.stats && p.stats.dates) s.stats.dates = p.stats.dates;
+    return s;
+  }
+  function loadState() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("focus-funnel.v1");
-      if (raw) {
-        var p = JSON.parse(raw);
-        if (Array.isArray(p.dump)) s.dump = p.dump.map(normalizeTask);
-        if (Array.isArray(p.today)) s.today = p.today.map(normalizeTask);
-        if (p.mode) s.mode = p.mode;
-        if (p.theme) s.theme = p.theme;
-        if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
-        if (p.soundType) s.soundType = p.soundType;
-        if (typeof p.volume === "number") s.volume = Math.min(1, Math.max(0, p.volume));
-        if (p.stats && p.stats.dates) s.stats.dates = p.stats.dates;
-      }
+      if (raw) return fromObject(JSON.parse(raw));
     } catch (e) {}
-    return s;
+    return defaults();
+  }
+  function looksLikeBackup(p) {
+    return p && typeof p === "object" && (Array.isArray(p.dump) || Array.isArray(p.today));
   }
   function normalizeTask(t) {
     return {
@@ -875,6 +888,44 @@
     if (!confirm("Clear all tasks and reset the timer? (Your streak history stays.)")) return;
     state.dump = []; state.today = []; state.mode = "focus";
     save(); setMode("focus"); render();
+  });
+
+  // ---- Export / Import (JSON backup) ----
+  function exportData() {
+    var json = JSON.stringify(state, null, 2);
+    var blob = new Blob([json], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var d = new Date();
+    var stamp = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    var a = document.createElement("a");
+    a.href = url; a.download = "focus-funnel-backup-" + stamp + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function importData(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch (e) { alert("Couldn't read that file — it isn't valid JSON."); return; }
+      if (!looksLikeBackup(parsed)) { alert("That doesn't look like a Focus Funnel backup file."); return; }
+      if (!confirm("Import this backup? It will replace your current tasks and settings.")) return;
+      state = fromObject(parsed);
+      save();
+      applyTheme(); applySoundLabel(); applySoundControls();
+      setMode(state.mode);
+      render();
+      alert("Backup imported ✓");
+    };
+    reader.onerror = function () { alert("Couldn't read that file."); };
+    reader.readAsText(file);
+  }
+  $("exportBtn").addEventListener("click", exportData);
+  $("importBtn").addEventListener("click", function () { $("importFile").click(); });
+  $("importFile").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (file) importData(file);
+    e.target.value = ""; // allow re-importing the same file later
   });
 
   document.addEventListener("keydown", function (e) {
