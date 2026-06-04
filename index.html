@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Focus Funnel</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --app-bg: radial-gradient(1200px 800px at 80% -10%, #1b2030 0%, #0f1117 55%);
+    --panel: #1a1d27;
+    --panel-2: #232735;
+    --line: #2e3344;
+    --text: #e7e9f0;
+    --muted: #8b90a3;
+    --accent: #6c8cff;
+    --accent-2: #ff7a59;
+    --good: #3ecf8e;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  [data-theme="light"] {
+    --bg: #f4f6fb;
+    --app-bg: radial-gradient(1200px 800px at 80% -10%, #ffffff 0%, #eef1f8 55%);
+    --panel: #ffffff;
+    --panel-2: #eef1f8;
+    --line: #dde2ee;
+    --text: #1c2030;
+    --muted: #6b7186;
+    --accent: #4f6fff;
+    --accent-2: #ff6a43;
+    --good: #19b877;
+    --shadow: 0 10px 30px rgba(40,50,80,.10);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--app-bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    transition: background .25s ease, color .25s ease;
+  }
+  header {
+    padding: 24px 24px 6px;
+    text-align: center;
+    position: relative;
+  }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: .5px; }
+  header h1 .funnel { color: var(--accent-2); }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+  .theme-toggle {
+    position: absolute; top: 20px; right: 20px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; font: inherit;
+  }
+  .theme-toggle:hover { filter: brightness(1.05); }
+
+  .stats { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600;
+    box-shadow: var(--shadow);
+  }
+  .stat.streak { color: var(--accent-2); }
+  .stat.done { color: var(--good); }
+
+  .wrap {
+    max-width: 1080px; margin: 0 auto; padding: 18px 20px 60px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px; box-shadow: var(--shadow);
+  }
+  .card h2 {
+    margin: 0 0 4px; font-size: 15px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); display: flex; align-items: center; justify-content: space-between;
+  }
+  .card h2 .count {
+    font-size: 12px; background: var(--panel-2); border: 1px solid var(--line);
+    padding: 2px 9px; border-radius: 999px; color: var(--muted); font-weight: 600;
+    letter-spacing: .3px;
+  }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+
+  .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-row input.text {
+    flex: 1; min-width: 0; background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); border-radius: 10px; padding: 11px 12px; font-size: 14px; outline: none;
+  }
+  .add-row input.est {
+    width: 64px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 10px; padding: 11px 10px; font-size: 14px; outline: none; text-align: center;
+  }
+  .add-row input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  button {
+    font: inherit; cursor: pointer; border: none; border-radius: 10px; padding: 11px 14px;
+    background: var(--accent); color: white; font-weight: 600;
+    transition: transform .05s ease, filter .15s ease;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:active { transform: translateY(1px); }
+  button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  button.ghost.active { border-color: var(--accent); color: var(--accent); }
+
+  ul.list { list-style: none; margin: 0; padding: 0; min-height: 40px; }
+
+  li.task {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px;
+    margin-bottom: 9px; transition: border-color .15s ease, opacity .15s ease, transform .12s ease, box-shadow .15s;
+  }
+  li.task.dragging { opacity: .35; }
+  li.task.in-today { border-left: 3px solid var(--accent-2); }
+  li.task.is-top { border-left: 3px solid var(--good); box-shadow: 0 0 0 1px rgba(62,207,142,.25) inset; }
+
+  .task .row { display: flex; align-items: center; gap: 9px; padding: 10px 12px; cursor: grab; }
+  .task .row:active { cursor: grabbing; }
+  .task .grip { color: var(--muted); font-size: 15px; line-height: 1; user-select: none; }
+  .task .expand {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 3px 7px; border-radius: 7px; font-size: 11.5px; font-weight: 700; min-width: 38px;
+  }
+  .task .expand:hover { color: var(--text); border-color: var(--accent); }
+  .task .label { flex: 1; font-size: 14.5px; word-break: break-word; cursor: pointer; }
+  .task .label.done { text-decoration: line-through; color: var(--muted); }
+  .task .est {
+    background: transparent; border: 1px dashed var(--line); color: var(--muted);
+    padding: 3px 8px; border-radius: 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .task .est.set { border-style: solid; color: var(--accent); border-color: var(--accent); }
+  .task .est:hover { color: var(--text); }
+  .task .mini {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  }
+  .task .mini:hover { color: var(--text); border-color: var(--accent); }
+  .task .x { background: transparent; color: var(--muted); padding: 4px 7px; border: none; font-size: 16px; }
+  .task .x:hover { color: var(--accent-2); }
+
+  /* Subtasks */
+  .subwrap { padding: 0 12px 10px 40px; }
+  ul.sublist { list-style: none; margin: 0 0 6px; padding: 0; }
+  li.sub { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+  li.sub .check {
+    width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--line);
+    cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white; background: transparent;
+  }
+  li.sub .check.on { background: var(--good); border-color: var(--good); }
+  li.sub .stext { flex: 1; font-size: 13px; color: var(--text); cursor: pointer; }
+  li.sub .stext.done { text-decoration: line-through; color: var(--muted); }
+  li.sub .sx { background: transparent; border: none; color: var(--muted); font-size: 14px; padding: 0 4px; }
+  li.sub .sx:hover { color: var(--accent-2); }
+  .subadd { display: flex; gap: 6px; }
+  .subadd input {
+    flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 7px 9px; font-size: 12.5px; outline: none;
+  }
+  .subadd input:focus { border-color: var(--accent); }
+  .subadd button { padding: 7px 11px; font-size: 12.5px; }
+
+  .funnel-drop {
+    border: 1.5px dashed var(--line); border-radius: 12px; padding: 6px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .funnel-drop.over { border-color: var(--accent); background: rgba(108,140,255,.08); }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 8px; }
+
+  .timer-card { grid-column: 1 / -1; text-align: center; }
+  .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 4px; min-height: 18px; }
+  .timer-task { font-size: 18px; font-weight: 600; margin: 2px 0 10px; min-height: 24px; }
+  .clock {
+    font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; margin: 4px 0 6px;
+  }
+  .clock.break { color: var(--good); }
+  .timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  .mode-pills {
+    display: inline-flex; gap: 6px; margin-bottom: 12px; background: var(--panel-2);
+    padding: 4px; border-radius: 999px; border: 1px solid var(--line);
+  }
+  .mode-pills button { background: transparent; color: var(--muted); padding: 6px 14px; font-size: 13px; border-radius: 999px; font-weight: 600; }
+  .mode-pills button.active { background: var(--accent); color: white; }
+  .mode-pills button.active.break { background: var(--good); }
+
+  .sound-row {
+    display: flex; gap: 16px; justify-content: center; align-items: center;
+    flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+  }
+  .sound-field { display: inline-flex; align-items: center; gap: 8px; }
+  .sound-lbl { color: var(--muted); font-size: 12.5px; font-weight: 600; min-width: 14px; }
+  #volPct { min-width: 34px; text-align: right; }
+  select#soundType {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 13px; cursor: pointer; outline: none;
+  }
+  select#soundType:focus { border-color: var(--accent); }
+  input[type="range"]#volume {
+    -webkit-appearance: none; appearance: none; width: 150px; height: 5px;
+    background: var(--line); border-radius: 999px; outline: none; cursor: pointer;
+  }
+  input[type="range"]#volume::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--panel); cursor: pointer;
+  }
+  input[type="range"]#volume::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent);
+    border: 2px solid var(--panel); cursor: pointer;
+  }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 30px; }
+  .reset-link { color: var(--muted); text-decoration: underline; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <button class="theme-toggle" id="themeToggle">🌙 Dark</button>
+  <h1>Focus <span class="funnel">Funnel</span></h1>
+  <p>Dump everything. Funnel the 3 that matter. Run the top one.</p>
+  <div class="stats">
+    <span class="stat streak" id="streakStat">🔥 0 day streak</span>
+    <span class="stat done" id="todayStat">✅ 0 done today</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- Brain dump -->
+  <section class="card">
+    <h2>Brain Dump <span class="count" id="dumpCount">0</span></h2>
+    <p class="hint">Get every loose thought out of your head. Drag the important ones right →</p>
+    <div class="add-row">
+      <input id="dumpInput" class="text" type="text" placeholder="Add a task and hit Enter…" autocomplete="off" />
+      <input id="dumpEst" class="est" type="number" min="1" placeholder="min" />
+      <button id="addBtn">Add</button>
+    </div>
+    <ul class="list" id="dump"></ul>
+  </section>
+
+  <!-- Today funnel -->
+  <section class="card">
+    <h2>Today <span class="count" id="todayCount">0 / 3</span></h2>
+    <p class="hint">Only 3 fit. Drag to reorder — the top task (green) is what the timer runs.</p>
+    <div class="funnel-drop" id="todayDrop">
+      <ul class="list" id="today"></ul>
+      <div class="empty" id="todayEmpty">Drag up to 3 tasks here</div>
+    </div>
+  </section>
+
+  <!-- Timer -->
+  <section class="card timer-card">
+    <div class="mode-pills">
+      <button data-mode="focus" class="active" id="pillfocus">Focus 25</button>
+      <button data-mode="short" id="pillshort">Break 5</button>
+      <button data-mode="long" id="pilllong">Long 15</button>
+    </div>
+    <div class="timer-top" id="timerTop">Working on</div>
+    <div class="timer-task" id="timerTask">— add a task to Today —</div>
+    <div class="clock" id="clock">25:00</div>
+    <div class="timer-controls">
+      <button id="startBtn">Start</button>
+      <button class="ghost" id="resetBtn">Reset</button>
+      <button class="ghost" id="doneBtn">✓ Finish top task</button>
+      <button class="ghost" id="soundToggle">🔊 Focus sound</button>
+    </div>
+    <div class="sound-row">
+      <label class="sound-field">
+        <span class="sound-lbl">Ambience</span>
+        <select id="soundType">
+          <option value="brown">🟤 Brown noise</option>
+          <option value="rain">🌧️ Rain</option>
+          <option value="ocean">🌊 Ocean waves</option>
+          <option value="ticks">🕰️ Ticking clock</option>
+        </select>
+      </label>
+      <label class="sound-field volume">
+        <span class="sound-lbl">🔈</span>
+        <input type="range" id="volume" min="0" max="100" step="1" />
+        <span class="sound-lbl" id="volPct">50%</span>
+      </label>
+    </div>
+  </section>
+</div>
+
+<footer>
+  Everything saves to this browser automatically · <span class="reset-link" id="clearAll">clear all data</span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "focus-funnel.v2";
+  var MAX_TODAY = 3;
+  var MODES = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
+
+  // ---- State ----
+  var state = loadState();
+
+  var timer = { remaining: MODES[state.mode] || MODES.focus, running: false, intervalId: null };
+
+  // ---- Persistence ----
+  function defaults() {
+    return { dump: [], today: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function loadState() {
+    var s = defaults();
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("focus-funnel.v1");
+      if (raw) {
+        var p = JSON.parse(raw);
+        if (Array.isArray(p.dump)) s.dump = p.dump.map(normalizeTask);
+        if (Array.isArray(p.today)) s.today = p.today.map(normalizeTask);
+        if (p.mode) s.mode = p.mode;
+        if (p.theme) s.theme = p.theme;
+        if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
+        if (p.soundType) s.soundType = p.soundType;
+        if (typeof p.volume === "number") s.volume = Math.min(1, Math.max(0, p.volume));
+        if (p.stats && p.stats.dates) s.stats.dates = p.stats.dates;
+      }
+    } catch (e) {}
+    return s;
+  }
+  function normalizeTask(t) {
+    return {
+      id: t.id || uid(),
+      text: String(t.text || ""),
+      done: !!t.done,
+      est: (typeof t.est === "number" && t.est > 0) ? t.est : null,
+      expanded: !!t.expanded,
+      subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
+        return { id: s.id || uid(), text: String(s.text || ""), done: !!s.done };
+      }) : []
+    };
+  }
+  function uid() {
+    return "t" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+  }
+
+  // ---- DOM refs ----
+  var $ = function (id) { return document.getElementById(id); };
+  var dumpEl = $("dump"), todayEl = $("today"), todayDrop = $("todayDrop");
+  var dumpInput = $("dumpInput"), dumpEst = $("dumpEst");
+
+  // ---- List helpers ----
+  function indexById(arr, id) {
+    for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return i;
+    return -1;
+  }
+  function findTask(id) {
+    var i = indexById(state.dump, id);
+    if (i >= 0) return state.dump[i];
+    i = indexById(state.today, id);
+    if (i >= 0) return state.today[i];
+    return null;
+  }
+  function inToday(id) { return indexById(state.today, id) >= 0; }
+  function removeFromAll(id) {
+    var i = indexById(state.dump, id);
+    if (i >= 0) return state.dump.splice(i, 1)[0];
+    i = indexById(state.today, id);
+    if (i >= 0) return state.today.splice(i, 1)[0];
+    return null;
+  }
+
+  function addTask(text, est) {
+    text = (text || "").trim();
+    if (!text) return;
+    state.dump.push({ id: uid(), text: text, done: false, est: est || null, expanded: false, subtasks: [] });
+    save(); render();
+  }
+
+  // Move a task into a list at a position (before beforeId, or end).
+  function moveTask(id, target, beforeId) {
+    var already = inToday(id);
+    if (target === "today" && !already && state.today.length >= MAX_TODAY) { flashFull(); return; }
+    var t = removeFromAll(id);
+    if (!t) return;
+    var arr = target === "today" ? state.today : state.dump;
+    var idx = arr.length;
+    if (beforeId) { var bi = indexById(arr, beforeId); if (bi >= 0) idx = bi; }
+    arr.splice(idx, 0, t);
+    save(); render();
+  }
+
+  function deleteTask(id) { removeFromAll(id); save(); render(); }
+
+  function toggleDone(id) {
+    var t = findTask(id);
+    if (!t) return;
+    t.done = !t.done;
+    recordCompletion(t.done ? 1 : -1);
+    save(); render();
+  }
+
+  function editEst(id) {
+    var t = findTask(id);
+    if (!t) return;
+    var v = prompt("Estimate in minutes (blank to clear):", t.est ? String(t.est) : "");
+    if (v === null) return;
+    v = v.trim();
+    if (v === "") { t.est = null; }
+    else { var n = parseInt(v, 10); if (!isNaN(n) && n > 0) t.est = n; }
+    save(); render();
+  }
+
+  // ---- Subtasks ----
+  function toggleExpand(id) { var t = findTask(id); if (t) { t.expanded = !t.expanded; save(); render(); } }
+  function addSub(id, text) {
+    text = (text || "").trim(); if (!text) return;
+    var t = findTask(id); if (!t) return;
+    t.subtasks.push({ id: uid(), text: text, done: false });
+    t.expanded = true;
+    save(); render();
+  }
+  function toggleSub(id, sid) {
+    var t = findTask(id); if (!t) return;
+    var i = indexById(t.subtasks, sid);
+    if (i >= 0) { t.subtasks[i].done = !t.subtasks[i].done; save(); render(); }
+  }
+  function deleteSub(id, sid) {
+    var t = findTask(id); if (!t) return;
+    var i = indexById(t.subtasks, sid);
+    if (i >= 0) { t.subtasks.splice(i, 1); save(); render(); }
+  }
+
+  // ---- Stats / streak ----
+  function keyOf(d) {
+    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+  function todayKey() { return keyOf(new Date()); }
+  function recordCompletion(delta) {
+    var k = todayKey();
+    state.stats.dates[k] = Math.max(0, (state.stats.dates[k] || 0) + delta);
+  }
+  function completedToday() { return state.stats.dates[todayKey()] || 0; }
+  function computeStreak() {
+    var dates = state.stats.dates;
+    var day = new Date();
+    // If nothing done yet today, the streak isn't broken — count from yesterday.
+    if (!(dates[keyOf(day)] > 0)) day.setDate(day.getDate() - 1);
+    var count = 0;
+    while (dates[keyOf(day)] > 0) { count++; day.setDate(day.getDate() - 1); }
+    return count;
+  }
+  function renderStats() {
+    var streak = computeStreak();
+    var done = completedToday();
+    $("streakStat").textContent = "🔥 " + streak + " day" + (streak === 1 ? "" : "s") + " streak";
+    $("todayStat").textContent = "✅ " + done + " done today";
+  }
+
+  // ---- Rendering ----
+  function makeTaskEl(t, isInToday, isTop) {
+    var li = document.createElement("li");
+    li.className = "task" + (isInToday ? " in-today" : "") + (isTop ? " is-top" : "");
+    li.dataset.id = t.id;
+
+    var row = document.createElement("div");
+    row.className = "row";
+    row.setAttribute("draggable", "true");
+
+    var grip = document.createElement("span"); grip.className = "grip"; grip.textContent = "⠿"; row.appendChild(grip);
+
+    // expand / subtask count
+    var subDone = t.subtasks.filter(function (s) { return s.done; }).length;
+    var exp = document.createElement("button");
+    exp.className = "expand";
+    exp.textContent = (t.expanded ? "▾" : "▸") + (t.subtasks.length ? " " + subDone + "/" + t.subtasks.length : " +");
+    exp.title = "Show / add sub-tasks";
+    exp.addEventListener("click", function (e) { e.stopPropagation(); toggleExpand(t.id); });
+    row.appendChild(exp);
+
+    var label = document.createElement("span");
+    label.className = "label" + (t.done ? " done" : "");
+    label.textContent = t.text;
+    label.title = "Click to mark done / undone";
+    label.addEventListener("click", function (e) { e.stopPropagation(); toggleDone(t.id); });
+    row.appendChild(label);
+
+    var est = document.createElement("button");
+    est.className = "est" + (t.est ? " set" : "");
+    est.textContent = t.est ? t.est + "m" : "+est";
+    est.title = "Set time estimate";
+    est.addEventListener("click", function (e) { e.stopPropagation(); editEst(t.id); });
+    row.appendChild(est);
+
+    var move = document.createElement("button");
+    move.className = "mini";
+    move.textContent = isInToday ? "← Back" : "Today →";
+    move.addEventListener("click", function (e) {
+      e.stopPropagation();
+      moveTask(t.id, isInToday ? "dump" : "today");
+    });
+    row.appendChild(move);
+
+    var x = document.createElement("button");
+    x.className = "x"; x.textContent = "×"; x.title = "Delete";
+    x.addEventListener("click", function (e) { e.stopPropagation(); deleteTask(t.id); });
+    row.appendChild(x);
+
+    // drag
+    row.addEventListener("dragstart", function (e) {
+      li.classList.add("dragging");
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    row.addEventListener("dragend", function () { li.classList.remove("dragging"); });
+
+    li.appendChild(row);
+
+    // subtask panel
+    if (t.expanded) {
+      var sw = document.createElement("div"); sw.className = "subwrap";
+      var sl = document.createElement("ul"); sl.className = "sublist";
+      t.subtasks.forEach(function (s) {
+        var sli = document.createElement("li"); sli.className = "sub";
+        var chk = document.createElement("button");
+        chk.className = "check" + (s.done ? " on" : "");
+        chk.textContent = s.done ? "✓" : "";
+        chk.addEventListener("click", function () { toggleSub(t.id, s.id); });
+        sli.appendChild(chk);
+        var st = document.createElement("span");
+        st.className = "stext" + (s.done ? " done" : "");
+        st.textContent = s.text;
+        st.addEventListener("click", function () { toggleSub(t.id, s.id); });
+        sli.appendChild(st);
+        var sx = document.createElement("button");
+        sx.className = "sx"; sx.textContent = "×";
+        sx.addEventListener("click", function () { deleteSub(t.id, s.id); });
+        sli.appendChild(sx);
+        sl.appendChild(sli);
+      });
+      sw.appendChild(sl);
+
+      var sa = document.createElement("div"); sa.className = "subadd";
+      var si = document.createElement("input");
+      si.type = "text"; si.placeholder = "Add a sub-task…";
+      si.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { addSub(t.id, si.value); }
+      });
+      var sb = document.createElement("button");
+      sb.textContent = "+";
+      sb.addEventListener("click", function () { addSub(t.id, si.value); });
+      sa.appendChild(si); sa.appendChild(sb);
+      sw.appendChild(sa);
+
+      li.appendChild(sw);
+    }
+
+    return li;
+  }
+
+  function render() {
+    dumpEl.innerHTML = "";
+    state.dump.forEach(function (t) { dumpEl.appendChild(makeTaskEl(t, false, false)); });
+
+    todayEl.innerHTML = "";
+    state.today.forEach(function (t, i) { todayEl.appendChild(makeTaskEl(t, true, i === 0)); });
+
+    $("dumpCount").textContent = state.dump.length;
+    var totalMin = state.today.reduce(function (a, t) { return a + (t.est || 0); }, 0);
+    $("todayCount").textContent = state.today.length + " / " + MAX_TODAY + (totalMin ? " · ~" + totalMin + "m" : "");
+    $("todayEmpty").style.display = state.today.length ? "none" : "block";
+
+    renderStats();
+    updateTimerTask();
+  }
+
+  function flashFull() {
+    todayDrop.classList.add("over");
+    setTimeout(function () { todayDrop.classList.remove("over"); }, 220);
+  }
+
+  // ---- Drag & drop with reordering ----
+  function dragAfter(container, y) {
+    var els = Array.prototype.slice.call(container.querySelectorAll("li.task:not(.dragging)"));
+    var closest = null, closestOffset = -Infinity;
+    els.forEach(function (child) {
+      var box = child.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closestOffset) { closestOffset = offset; closest = child; }
+    });
+    return closest;
+  }
+
+  function wireDropZone(zone, listEl, target) {
+    zone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (target === "today") zone.classList.add("over");
+    });
+    zone.addEventListener("dragleave", function (e) {
+      if (target === "today" && !zone.contains(e.relatedTarget)) zone.classList.remove("over");
+    });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      if (target === "today") zone.classList.remove("over");
+      var id = e.dataTransfer.getData("text/plain");
+      if (!id) return;
+      var after = dragAfter(listEl, e.clientY);
+      var beforeId = after ? after.dataset.id : null;
+      moveTask(id, target, beforeId);
+    });
+  }
+  wireDropZone(todayDrop, todayEl, "today");
+  wireDropZone(dumpEl, dumpEl, "dump");
+
+  // ---- Timer ----
+  function fmt(s) {
+    var m = Math.floor(s / 60), sec = s % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+  function topTask() { return state.today.length ? state.today[0] : null; }
+
+  function updateTimerTask() {
+    var t = topTask();
+    var isBreak = state.mode !== "focus";
+    $("timerTop").textContent = isBreak ? "On a break" : "Working on";
+    if (isBreak) { $("timerTask").textContent = "Step away for a bit ☕"; return; }
+    if (!t) { $("timerTask").textContent = "— add a task to Today —"; return; }
+    $("timerTask").textContent = t.text + (t.est ? "  · ~" + t.est + "m" : "") + (t.done ? "  ✓" : "");
+  }
+
+  function setMode(mode) {
+    state.mode = mode; save();
+    stopTimer();
+    timer.remaining = MODES[mode];
+    ["focus", "short", "long"].forEach(function (m) {
+      var pill = $("pill" + m);
+      var active = m === mode;
+      pill.classList.toggle("active", active);
+      pill.classList.toggle("break", active && m !== "focus");
+    });
+    $("clock").classList.toggle("break", mode !== "focus");
+    paint(); updateTimerTask();
+  }
+  function paint() { $("clock").textContent = fmt(timer.remaining); }
+
+  function tick() {
+    timer.remaining -= 1;
+    if (timer.remaining <= 0) { timer.remaining = 0; paint(); finishTimer(); return; }
+    paint();
+  }
+  function startTimer() {
+    if (timer.running) return;
+    if (timer.remaining <= 0) timer.remaining = MODES[state.mode];
+    timer.running = true; $("startBtn").textContent = "Pause";
+    timer.intervalId = setInterval(tick, 1000);
+    startFocusSound();
+  }
+  function pauseTimer() {
+    timer.running = false; $("startBtn").textContent = "Start";
+    if (timer.intervalId) clearInterval(timer.intervalId);
+    timer.intervalId = null;
+    stopFocusSound();
+  }
+  function stopTimer() { pauseTimer(); }
+  function toggleTimer() { timer.running ? pauseTimer() : startTimer(); }
+  function resetTimer() { stopTimer(); timer.remaining = MODES[state.mode]; paint(); }
+
+  function finishTimer() {
+    pauseTimer();
+    alarm();
+    flashBanner(state.mode === "focus" ? "Focus session done! Take a break ☕" : "Break over — back to it 💪");
+  }
+  function flashBanner(msg) { $("timerTop").textContent = msg; setTimeout(updateTimerTask, 4000); }
+
+  // ---- Audio engine (no asset files — all synthesized) ----
+  var audio = { ctx: null, master: null, nodes: [], tickTimer: null, playing: false };
+  function getCtx() {
+    if (!audio.ctx) {
+      try { audio.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return null; }
+    }
+    if (audio.ctx.state === "suspended") { try { audio.ctx.resume(); } catch (e) {} }
+    return audio.ctx;
+  }
+
+  function noiseBuffer(ctx, brown) {
+    var len = 2 * ctx.sampleRate;
+    var buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    var data = buffer.getChannelData(0), last = 0;
+    for (var i = 0; i < len; i++) {
+      var white = Math.random() * 2 - 1;
+      if (brown) { last = (last + 0.02 * white) / 1.02; data[i] = last * 3.2; }
+      else { data[i] = white; }
+    }
+    return buffer;
+  }
+
+  // Each builder wires its graph into `master` and returns the nodes to stop later.
+  var BUILDERS = {
+    brown: function (ctx, master) {
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, true); src.loop = true;
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.10;
+      src.connect(lp); lp.connect(lvl); lvl.connect(master); src.start();
+      return [src];
+    },
+    rain: function (ctx, master) {
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, false); src.loop = true;
+      var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1100;
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 6500;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.10;
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 0.3;
+      var lfoGain = ctx.createGain(); lfoGain.gain.value = 0.03;
+      lfo.connect(lfoGain); lfoGain.connect(lvl.gain);
+      src.connect(hp); hp.connect(lp); lp.connect(lvl); lvl.connect(master);
+      src.start(); lfo.start();
+      return [src, lfo];
+    },
+    ocean: function (ctx, master) {
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, true); src.loop = true;
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.07;
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 0.12; // slow swell
+      var lfoGain = ctx.createGain(); lfoGain.gain.value = 0.06;
+      lfo.connect(lfoGain); lfoGain.connect(lvl.gain);
+      src.connect(lp); lp.connect(lvl); lvl.connect(master);
+      src.start(); lfo.start();
+      return [src, lfo];
+    },
+    ticks: function (ctx, master) {
+      function tick(high) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "triangle"; o.frequency.value = high ? 1250 : 950;
+        o.connect(g); g.connect(master);
+        var t0 = ctx.currentTime;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.55, t0 + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+        o.start(t0); o.stop(t0 + 0.07);
+      }
+      var i = 0;
+      tick(true);
+      audio.tickTimer = setInterval(function () { i++; tick(i % 2 === 0); }, 1000);
+      return [];
+    }
+  };
+
+  function startFocusSound() {
+    if (!state.soundOn || audio.playing) return;
+    var ctx = getCtx();
+    if (!ctx) return;
+    var master = ctx.createGain();
+    master.gain.value = 0.0001;
+    master.connect(ctx.destination);
+    var build = BUILDERS[state.soundType] || BUILDERS.brown;
+    audio.nodes = build(ctx, master);
+    audio.master = master;
+    audio.playing = true;
+    master.gain.exponentialRampToValueAtTime(Math.max(state.volume, 0.0001), ctx.currentTime + 1.0);
+  }
+  function stopFocusSound() {
+    if (!audio.playing) return;
+    var ctx = audio.ctx, master = audio.master, nodes = audio.nodes;
+    if (audio.tickTimer) { clearInterval(audio.tickTimer); audio.tickTimer = null; }
+    try {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), ctx.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+      nodes.forEach(function (n) { try { n.stop(ctx.currentTime + 0.45); } catch (e) {} });
+    } catch (e) {}
+    audio.playing = false; audio.master = null; audio.nodes = [];
+  }
+  function setLiveVolume(v) {
+    if (!audio.playing || !audio.master || !audio.ctx) return;
+    try {
+      audio.master.gain.cancelScheduledValues(audio.ctx.currentTime);
+      audio.master.gain.setTargetAtTime(Math.max(v, 0.0001), audio.ctx.currentTime, 0.05);
+    } catch (e) {}
+  }
+  function restartIfPlaying() {
+    if (audio.playing) { stopFocusSound(); setTimeout(startFocusSound, 60); }
+  }
+
+  // Insistent two-tone alarm when a session ends.
+  function alarm() {
+    var ctx = getCtx();
+    if (!ctx) return;
+    var freqs = [880, 660, 880, 660, 880, 660];
+    freqs.forEach(function (f, i) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "square"; o.frequency.value = f;
+      o.connect(g); g.connect(ctx.destination);
+      var t0 = ctx.currentTime + i * 0.26;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+      o.start(t0); o.stop(t0 + 0.22);
+    });
+  }
+
+  function finishTopTask() {
+    var t = topTask(); if (!t) return;
+    if (!t.done) recordCompletion(1);
+    removeFromAll(t.id);
+    save(); render(); resetTimer();
+    if (state.mode !== "focus") setMode("focus");
+  }
+
+  // ---- Theme ----
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", state.theme);
+    $("themeToggle").textContent = state.theme === "dark" ? "🌙 Dark" : "☀️ Light";
+  }
+  function toggleTheme() {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    save(); applyTheme();
+  }
+
+  // ---- Sound toggle ----
+  function applySoundLabel() {
+    $("soundToggle").textContent = state.soundOn ? "🔊 Focus sound" : "🔇 Focus sound";
+    $("soundToggle").classList.toggle("active", state.soundOn);
+  }
+  function toggleSound() {
+    state.soundOn = !state.soundOn;
+    save(); applySoundLabel();
+    if (state.soundOn) { if (timer.running) startFocusSound(); }
+    else { stopFocusSound(); }
+  }
+  function applySoundControls() {
+    $("soundType").value = state.soundType;
+    $("volume").value = Math.round(state.volume * 100);
+    $("volPct").textContent = Math.round(state.volume * 100) + "%";
+  }
+  function changeSoundType() {
+    state.soundType = $("soundType").value;
+    save();
+    restartIfPlaying();
+  }
+  function changeVolume() {
+    state.volume = Math.min(1, Math.max(0, parseInt($("volume").value, 10) / 100));
+    $("volPct").textContent = Math.round(state.volume * 100) + "%";
+    save();
+    setLiveVolume(state.volume);
+  }
+
+  // ---- Controls ----
+  function readEstInput() {
+    var v = parseInt(dumpEst.value, 10);
+    return (!isNaN(v) && v > 0) ? v : null;
+  }
+  function submitAdd() {
+    addTask(dumpInput.value, readEstInput());
+    dumpInput.value = ""; dumpEst.value = ""; dumpInput.focus();
+  }
+  $("addBtn").addEventListener("click", submitAdd);
+  dumpInput.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAdd(); });
+  dumpEst.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAdd(); });
+
+  $("startBtn").addEventListener("click", toggleTimer);
+  $("resetBtn").addEventListener("click", resetTimer);
+  $("doneBtn").addEventListener("click", finishTopTask);
+  $("themeToggle").addEventListener("click", toggleTheme);
+  $("soundToggle").addEventListener("click", toggleSound);
+  $("soundType").addEventListener("change", changeSoundType);
+  $("volume").addEventListener("input", changeVolume);
+
+  $("pillfocus").addEventListener("click", function () { setMode("focus"); });
+  $("pillshort").addEventListener("click", function () { setMode("short"); });
+  $("pilllong").addEventListener("click", function () { setMode("long"); });
+
+  $("clearAll").addEventListener("click", function () {
+    if (!confirm("Clear all tasks and reset the timer? (Your streak history stays.)")) return;
+    state.dump = []; state.today = []; state.mode = "focus";
+    save(); setMode("focus"); render();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    var tag = document.activeElement.tagName;
+    if (e.code === "Space" && tag !== "INPUT" && tag !== "TEXTAREA") {
+      e.preventDefault(); toggleTimer();
+    }
+  });
+
+  // ---- Boot ----
+  applyTheme();
+  applySoundLabel();
+  applySoundControls();
+  setMode(state.mode);
+  render();
+  paint();
+})();
+</script>
+</body>
+</html>
