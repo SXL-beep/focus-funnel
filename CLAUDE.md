@@ -6,11 +6,20 @@ sound. Built for personal daily use.
 
 ## What it is
 
-- **One file: `index.html`.** All HTML, CSS, and JavaScript inline. No build step, no
-  server, no npm, no internet required. Open the file in a browser and it runs.
+- **Core app is one file: `index.html`.** All HTML, CSS, and JavaScript inline. No build
+  step, no server, no npm, no internet required. Open the file in a browser and it runs.
 - Vanilla JavaScript (ES5-ish style, IIFE-wrapped, `"use strict"`). No frameworks.
 - State persists to the browser's `localStorage` under the key `focus-funnel.v2`
   (migrates from `focus-funnel.v1` if present).
+- **Installable PWA.** Ships a web app manifest + icons so it can be added to a phone's
+  home screen and run full-screen. The only non-`index.html` files are these static
+  assets (no build tooling):
+  - `manifest.webmanifest` — PWA manifest (name, icons, standalone display).
+  - `icon.svg` — favicon (browser tabs).
+  - `icon-192.png`, `icon-512.png` — PWA / Android icons (also maskable).
+  - `apple-touch-icon.png` — 180x180 iOS home-screen icon.
+  - `make-icons.py` — regenerates all icons from scratch (stdlib only): `python3 make-icons.py`.
+  - NOTE: PWA install needs HTTPS — works on the live GitHub Pages site, not from `file://`.
 
 ## How to run / use
 

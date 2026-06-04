@@ -2,8 +2,23 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Focus Funnel</title>
+
+<!-- Favicon (browser tabs) -->
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="alternate icon" type="image/png" href="icon-192.png" />
+
+<!-- Installable web app (Add to Home Screen) -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" id="themeColorMeta" content="#0f1117" />
+
+<!-- iOS home-screen app support -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Focus Funnel" />
 <style>
   :root {
     --bg: #0f1117;
@@ -825,6 +840,8 @@
   function applyTheme() {
     document.documentElement.setAttribute("data-theme", state.theme);
     $("themeToggle").textContent = state.theme === "dark" ? "🌙 Dark" : "☀️ Light";
+    var meta = document.getElementById("themeColorMeta");
+    if (meta) meta.setAttribute("content", state.theme === "dark" ? "#0f1117" : "#f4f6fb");
   }
   function toggleTheme() {
     state.theme = state.theme === "dark" ? "light" : "dark";
