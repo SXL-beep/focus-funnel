@@ -39,6 +39,10 @@ sound. Built for personal daily use.
   add/remove), plus an input to create a new one. Tags render as deterministically-colored chips;
   clicking a chip filters Brain Dump, Today, and Done to that tag (filter bar with clear button).
   `state.*[].tags: string[]`. Rename a task by double-clicking its title (no pencil button).
+  Delete a tag everywhere via the × on its picker chip. **Bulk-tag mode:** the ☑ Select toggle
+  (Brain Dump header) turns Brain Dump + Today rows into checkboxes; a fixed bottom bar shows
+  "N selected" + 🏷 Tag (opens the picker in `pickerMode="bulk"`, applying tags to all selected),
+  Clear, and Done. Ephemeral `selectMode`/`selected` (not persisted).
 - **Pomodoro timer** — Focus 25 / Break 5 / Long 15 modes. Spacebar toggles start/pause.
 - **Completed-today counter & streak** (consecutive days with >=1 completion).
 - **Done list** — finishing the top task archives it to `state.done` (newest first) instead
