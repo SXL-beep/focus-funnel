@@ -185,10 +185,18 @@
   .tag-pop-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; }
   .tag-pop-empty { font-size: 12.5px; color: var(--muted); padding: 2px 0 4px; }
   .tag-pop-chip {
-    font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
-    border: 1px solid transparent; cursor: pointer; line-height: 1.4;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 700; padding: 4px 7px 4px 10px; border-radius: 999px;
+    border: 1px solid transparent; line-height: 1.4;
   }
-  .tag-pop-chip:hover { filter: brightness(1.06); }
+  .tag-pop-chip .tpc-label { cursor: pointer; }
+  .tag-pop-chip:hover { filter: brightness(1.04); }
+  .tpc-del {
+    cursor: pointer; font-weight: 800; font-size: 13px; line-height: 1; opacity: .55;
+    width: 15px; height: 15px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+  }
+  .tpc-del:hover { opacity: 1; background: rgba(0,0,0,.16); }
   .tag-pop-add { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
   .tag-pop-add input {
     width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
@@ -598,15 +606,35 @@
     tags.forEach(function (tag) {
       var on = (t.tags || []).indexOf(tag) >= 0;
       var hue = tagHue(tag);
-      var chip = document.createElement("button");
+      var chip = document.createElement("span");
       chip.className = "tag-pop-chip" + (on ? " on" : "");
-      chip.textContent = (on ? "✓ #" : "#") + tag;
       chip.style.color = on ? "#fff" : "hsl(" + hue + ",55%,45%)";
       chip.style.background = on ? "hsl(" + hue + ",60%,52%)" : "hsla(" + hue + ",60%,55%,0.12)";
       chip.style.borderColor = "hsla(" + hue + ",60%,55%,0.55)";
-      chip.addEventListener("click", function (e) { e.stopPropagation(); toggleTaskTag(pickerTaskId, tag); });
+
+      var lab = document.createElement("span");
+      lab.className = "tpc-label";
+      lab.textContent = (on ? "✓ #" : "#") + tag;
+      lab.addEventListener("click", function (e) { e.stopPropagation(); toggleTaskTag(pickerTaskId, tag); });
+      chip.appendChild(lab);
+
+      var del = document.createElement("span");
+      del.className = "tpc-del";
+      del.textContent = "×";
+      del.title = "Delete tag #" + tag + " everywhere";
+      del.addEventListener("click", function (e) { e.stopPropagation(); deleteTagEverywhere(tag); });
+      chip.appendChild(del);
+
       list.appendChild(chip);
     });
+  }
+  function deleteTagEverywhere(tag) {
+    if (!confirm('Delete the tag "#' + tag + '" from every task? This cannot be undone.')) return;
+    state.dump.concat(state.today, state.done).forEach(function (t) {
+      if (t.tags) { var i = t.tags.indexOf(tag); if (i >= 0) t.tags.splice(i, 1); }
+    });
+    if (activeFilter === tag) activeFilter = null;
+    save(); render(); refreshTagPicker();
   }
   function openTagPicker(id, anchorEl) {
     if (pickerTaskId === id && pickerEl) { closeTagPicker(); return; } // toggle off
