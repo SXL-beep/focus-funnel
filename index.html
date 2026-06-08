@@ -134,7 +134,7 @@
   li.task.in-today { border-left: 3px solid var(--accent-2); }
   li.task.is-top { border-left: 3px solid var(--good); box-shadow: 0 0 0 1px rgba(62,207,142,.25) inset; }
 
-  .task .row { display: flex; align-items: center; gap: 9px; padding: 10px 12px; cursor: grab; }
+  .task .row { display: flex; align-items: center; gap: 9px; padding: 10px 12px; cursor: grab; flex-wrap: wrap; }
   .task .row:active { cursor: grabbing; }
   .task .grip { color: var(--muted); font-size: 15px; line-height: 1; user-select: none; }
   .task .expand {
@@ -157,6 +157,29 @@
   .task .mini:hover { color: var(--text); border-color: var(--accent); }
   .task .x { background: transparent; color: var(--muted); padding: 4px 7px; border: none; font-size: 16px; }
   .task .x:hover { color: var(--accent-2); }
+
+  /* Tags */
+  .tag-chip {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid transparent; cursor: pointer; white-space: nowrap; line-height: 1.5;
+  }
+  .tag-chip:hover { filter: brightness(1.12); }
+  .task .tag-edit {
+    background: transparent; border: 1px dashed var(--line); color: var(--muted);
+    padding: 3px 7px; border-radius: 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .task .tag-edit:hover { color: var(--text); border-color: var(--accent); }
+  .filter-bar {
+    max-width: 1080px; margin: 0 auto; padding: 0 20px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .filter-bar .fb-inner {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .filter-bar .fb-clear { cursor: pointer; color: var(--accent-2); font-weight: 700; text-decoration: none; }
+  .filter-bar .fb-clear:hover { filter: brightness(1.1); }
 
   /* Subtasks */
   .subwrap { padding: 0 12px 10px 40px; }
@@ -252,13 +275,15 @@
   </div>
 </header>
 
+<div class="filter-bar" id="filterBar" hidden></div>
+
 <div class="wrap">
   <!-- Brain dump -->
   <section class="card">
     <h2>Brain Dump <span class="count" id="dumpCount">0</span></h2>
-    <p class="hint">Get every loose thought out of your head. Drag the important ones right →</p>
+    <p class="hint">Get every loose thought out of your head. Add <b>#tags</b> (e.g. “Email Sam #work”). Drag the important ones right →</p>
     <div class="add-row">
-      <input id="dumpInput" class="text" type="text" placeholder="Add a task and hit Enter…" autocomplete="off" />
+      <input id="dumpInput" class="text" type="text" placeholder="Add a task…  use #tags" autocomplete="off" />
       <input id="dumpEst" class="est" type="number" min="1" placeholder="min" />
       <button id="addBtn">Add</button>
     </div>
@@ -378,11 +403,35 @@
       text: String(t.text || ""),
       done: !!t.done,
       est: (typeof t.est === "number" && t.est > 0) ? t.est : null,
+      tags: Array.isArray(t.tags) ? parseTags(t.tags.join(" ")) : [],
       expanded: !!t.expanded,
       subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
         return { id: s.id || uid(), text: String(s.text || ""), done: !!s.done };
       }) : []
     };
+  }
+  // Tag helpers: normalize to lowercase, de-duped, no '#'.
+  function parseTags(str) {
+    var out = [], seen = {};
+    String(str || "").split(/[\s,]+/).forEach(function (raw) {
+      var t = raw.replace(/^#+/, "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+      if (t && !seen[t]) { seen[t] = 1; out.push(t); }
+    });
+    return out;
+  }
+  // Pull #tags out of free text, returning the cleaned text + tag list.
+  function extractInlineTags(text) {
+    var tags = [];
+    var cleaned = String(text || "").replace(/#([A-Za-z0-9_-]+)/g, function (_, w) {
+      tags.push(w); return "";
+    });
+    return { text: cleaned.replace(/\s{2,}/g, " ").trim(), tags: parseTags(tags.join(" ")) };
+  }
+  // Deterministic hue (0-359) per tag, so a tag always gets the same color.
+  function tagHue(tag) {
+    var h = 0;
+    for (var i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) % 360;
+    return h;
   }
   // A finished task, plus the date it was completed (for restore / display).
   function normalizeDone(t) {
@@ -422,9 +471,11 @@
   }
 
   function addTask(text, est) {
-    text = (text || "").trim();
-    if (!text) return;
-    state.dump.push({ id: uid(), text: text, done: false, est: est || null, expanded: false, subtasks: [] });
+    var parsed = extractInlineTags(text);
+    // Carry the active filter as a tag, so adding while filtered stays in-context.
+    if (activeFilter && parsed.tags.indexOf(activeFilter) < 0) parsed.tags.push(activeFilter);
+    if (!parsed.text) return;
+    state.dump.push({ id: uid(), text: parsed.text, done: false, est: est || null, tags: parsed.tags, expanded: false, subtasks: [] });
     save(); render();
   }
 
@@ -460,6 +511,37 @@
     if (v === "") { t.est = null; }
     else { var n = parseInt(v, 10); if (!isNaN(n) && n > 0) t.est = n; }
     save(); render();
+  }
+
+  function editTags(id) {
+    var t = findTask(id);
+    if (!t) return;
+    var v = prompt("Tags (space or comma separated, # optional):", (t.tags || []).join(" "));
+    if (v === null) return;
+    t.tags = parseTags(v);
+    save(); render();
+  }
+
+  // ---- Tag filtering ----
+  var activeFilter = null;
+  function setFilter(tag) { activeFilter = tag || null; render(); }
+  function clearFilter() { activeFilter = null; render(); }
+  function matchesFilter(t) { return !activeFilter || (t.tags && t.tags.indexOf(activeFilter) >= 0); }
+
+  function makeTagChip(tag) {
+    var hue = tagHue(tag);
+    var chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.textContent = "#" + tag;
+    chip.style.color = "hsl(" + hue + ",70%,72%)";
+    chip.style.background = "hsla(" + hue + ",65%,50%,0.16)";
+    chip.style.borderColor = "hsla(" + hue + ",60%,55%,0.5)";
+    chip.title = "Filter by #" + tag;
+    chip.addEventListener("click", function (e) { e.stopPropagation(); setFilter(tag); });
+    return chip;
+  }
+  function appendTagChips(row, t) {
+    (t.tags || []).forEach(function (tag) { row.appendChild(makeTagChip(tag)); });
   }
 
   // ---- Subtasks ----
@@ -535,6 +617,15 @@
     label.title = "Click to mark done / undone";
     label.addEventListener("click", function (e) { e.stopPropagation(); toggleDone(t.id); });
     row.appendChild(label);
+
+    appendTagChips(row, t);
+
+    var tagBtn = document.createElement("button");
+    tagBtn.className = "tag-edit";
+    tagBtn.textContent = "🏷";
+    tagBtn.title = "Edit tags";
+    tagBtn.addEventListener("click", function (e) { e.stopPropagation(); editTags(t.id); });
+    row.appendChild(tagBtn);
 
     var est = document.createElement("button");
     est.className = "est" + (t.est ? " set" : "");
@@ -624,6 +715,8 @@
     label.textContent = t.text;
     row.appendChild(label);
 
+    appendTagChips(row, t);
+
     var when = document.createElement("span");
     when.className = "when";
     when.textContent = t.doneDate === todayKey() ? "today" : (t.doneDate || "");
@@ -647,13 +740,13 @@
 
   function render() {
     dumpEl.innerHTML = "";
-    state.dump.forEach(function (t) { dumpEl.appendChild(makeTaskEl(t, false, false)); });
+    state.dump.forEach(function (t) { if (matchesFilter(t)) dumpEl.appendChild(makeTaskEl(t, false, false)); });
 
     todayEl.innerHTML = "";
-    state.today.forEach(function (t, i) { todayEl.appendChild(makeTaskEl(t, true, i === 0)); });
+    state.today.forEach(function (t, i) { if (matchesFilter(t)) todayEl.appendChild(makeTaskEl(t, true, i === 0)); });
 
     doneEl.innerHTML = "";
-    state.done.forEach(function (t) { doneEl.appendChild(makeDoneEl(t)); });
+    state.done.forEach(function (t) { if (matchesFilter(t)) doneEl.appendChild(makeDoneEl(t)); });
 
     $("dumpCount").textContent = state.dump.length;
     var totalMin = state.today.reduce(function (a, t) { return a + (t.est || 0); }, 0);
@@ -662,8 +755,25 @@
     $("doneCount").textContent = state.done.length;
     $("doneEmpty").style.display = state.done.length ? "none" : "block";
 
+    renderFilterBar();
     renderStats();
     updateTimerTask();
+  }
+
+  function renderFilterBar() {
+    var bar = $("filterBar");
+    if (!activeFilter) { bar.hidden = true; bar.textContent = ""; return; }
+    bar.hidden = false; bar.textContent = "";
+    var inner = document.createElement("span"); inner.className = "fb-inner";
+    var n = state.dump.concat(state.today, state.done).filter(matchesFilter).length;
+    inner.appendChild(document.createTextNode("Showing "));
+    inner.appendChild(makeTagChip(activeFilter));
+    inner.appendChild(document.createTextNode(" · " + n + " task" + (n === 1 ? "" : "s") + "  "));
+    var clr = document.createElement("a");
+    clr.className = "fb-clear"; clr.href = "#"; clr.textContent = "✕ clear filter";
+    clr.addEventListener("click", function (e) { e.preventDefault(); clearFilter(); });
+    inner.appendChild(clr);
+    bar.appendChild(inner);
   }
 
   function flashFull() {
