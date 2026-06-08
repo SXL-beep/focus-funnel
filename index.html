@@ -61,13 +61,13 @@
     transition: background .25s ease, color .25s ease;
   }
   header {
-    padding: 24px 24px 6px;
+    padding: 14px 24px 4px;
     text-align: center;
     position: relative;
   }
-  header h1 { margin: 0; font-size: 26px; letter-spacing: .5px; }
+  header h1 { margin: 0; font-size: 24px; letter-spacing: .5px; }
   header h1 .funnel { color: var(--accent-2); }
-  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; }
 
   .theme-toggle {
     position: absolute; top: 20px; right: 20px;
@@ -76,7 +76,7 @@
   }
   .theme-toggle:hover { filter: brightness(1.05); }
 
-  .stats { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .stats { display: flex; gap: 10px; justify-content: center; margin-top: 9px; flex-wrap: wrap; }
   .stat {
     background: var(--panel); border: 1px solid var(--line); color: var(--text);
     border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600;
@@ -86,14 +86,14 @@
   .stat.done { color: var(--good); }
 
   .wrap {
-    max-width: 1320px; margin: 0 auto; padding: 24px 32px 72px;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+    max-width: none; margin: 0 auto; padding: 14px 28px 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
   }
-  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; gap: 20px; padding: 18px 18px 60px; } }
+  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; gap: 14px; padding: 12px 14px 48px; } }
 
   .card {
     background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
-    padding: 22px; box-shadow: var(--shadow);
+    padding: 16px 18px; box-shadow: var(--shadow);
   }
   .card h2 {
     margin: 0 0 4px; font-size: 15px; text-transform: uppercase; letter-spacing: 1.2px;
@@ -104,9 +104,9 @@
     padding: 2px 9px; border-radius: 999px; color: var(--muted); font-weight: 600;
     letter-spacing: .3px;
   }
-  .hint { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 2px 0 10px; }
 
-  .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-row { display: flex; gap: 8px; margin-bottom: 10px; }
   .add-row input.text {
     flex: 1; min-width: 0; background: var(--panel-2); border: 1px solid var(--line);
     color: var(--text); border-radius: 10px; padding: 11px 12px; font-size: 14px; outline: none;
@@ -128,18 +128,18 @@
   button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
   button.ghost.active { border-color: var(--accent); color: var(--accent); }
 
-  ul.list { list-style: none; margin: 0; padding: 0; min-height: 40px; }
+  ul.list { list-style: none; margin: 0; padding: 0; min-height: 24px; }
 
   li.task {
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px;
     border-left: 3px solid transparent;
-    margin-bottom: 10px; transition: border-color .15s ease, opacity .15s ease, transform .12s ease, box-shadow .15s, background .15s;
+    margin-bottom: 7px; transition: border-color .15s ease, opacity .15s ease, transform .12s ease, box-shadow .15s, background .15s;
   }
   li.task.dragging { opacity: .35; }
   li.task.in-today { border-left-color: var(--line); }
   li.task.is-top { border-left-color: var(--accent); background: var(--accent-soft); }
 
-  .task .row { display: flex; align-items: center; gap: 9px; padding: 12px 13px; cursor: grab; flex-wrap: wrap; }
+  .task .row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: grab; flex-wrap: wrap; }
   .task .row:active { cursor: grabbing; }
   .task .grip { color: var(--muted); font-size: 15px; line-height: 1; user-select: none; }
   .task .expand {
@@ -180,7 +180,7 @@
   }
   .task .edit-btn:hover { color: var(--text); border-color: var(--accent); }
   .filter-bar {
-    max-width: 1320px; margin: 0 auto; padding: 0 32px;
+    max-width: none; margin: 0 auto; padding: 0 28px;
     display: flex; align-items: center; justify-content: center; gap: 10px;
   }
   .filter-bar .fb-inner {
@@ -227,16 +227,16 @@
   li.done-item .done-check { color: var(--good); font-size: 15px; font-weight: 700; }
   li.done-item .when { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
   .timer-card { grid-column: 1 / -1; text-align: center; }
-  .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 4px; min-height: 18px; }
-  .timer-task { font-size: 18px; font-weight: 600; margin: 2px 0 10px; min-height: 24px; }
+  .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 3px; min-height: 16px; }
+  .timer-task { font-size: 17px; font-weight: 600; margin: 2px 0 8px; min-height: 22px; }
   .clock {
-    font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums;
-    letter-spacing: 2px; margin: 4px 0 6px;
+    font-size: 52px; font-weight: 700; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; margin: 2px 0 4px;
   }
   .clock.break { color: var(--good); }
-  .timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  .timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
   .mode-pills {
-    display: inline-flex; gap: 6px; margin-bottom: 12px; background: var(--panel-2);
+    display: inline-flex; gap: 6px; margin-bottom: 10px; background: var(--panel-2);
     padding: 4px; border-radius: 999px; border: 1px solid var(--line);
   }
   .mode-pills button { background: transparent; color: var(--muted); padding: 6px 14px; font-size: 13px; border-radius: 999px; font-weight: 600; }
