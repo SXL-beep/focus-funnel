@@ -34,9 +34,11 @@ sound. Built for personal daily use.
 - **Drag-to-reorder within Today** — the top task (green border) is what the timer runs.
 - **Sub-tasks** per task (expandable checklist with progress count).
 - **Time estimates** per task (minutes); Today header sums them.
-- **Tags** per task — type `#tag` inline when adding (parsed out of the text) or edit via the
-  🏷 pill. Tags render as deterministically-colored chips; clicking a chip filters Brain Dump,
-  Today, and Done to that tag (filter bar at top with a clear button). `state.*[].tags: string[]`.
+- **Tags** per task — type `#tag` inline when adding (parsed out of the text), or click the 🏷
+  pill to open a **tag picker** popover: all existing tags shown as selectable chips (click to
+  add/remove), plus an input to create a new one. Tags render as deterministically-colored chips;
+  clicking a chip filters Brain Dump, Today, and Done to that tag (filter bar with clear button).
+  `state.*[].tags: string[]`. Rename a task by double-clicking its title (no pencil button).
 - **Pomodoro timer** — Focus 25 / Break 5 / Long 15 modes. Spacebar toggles start/pause.
 - **Completed-today counter & streak** (consecutive days with >=1 completion).
 - **Done list** — finishing the top task archives it to `state.done` (newest first) instead

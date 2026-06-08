@@ -174,11 +174,28 @@
     padding: 3px 7px; border-radius: 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
   }
   .task .tag-edit:hover { color: var(--text); border-color: var(--accent); }
-  .task .edit-btn {
-    background: transparent; border: 1px solid var(--line); color: var(--muted);
-    padding: 3px 7px; border-radius: 7px; font-size: 11.5px; white-space: nowrap;
+
+  /* Tag picker popover */
+  .tag-pop {
+    position: absolute; display: none; z-index: 50; width: 248px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.22); padding: 12px;
   }
-  .task .edit-btn:hover { color: var(--text); border-color: var(--accent); }
+  .tag-pop-head { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+  .tag-pop-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; }
+  .tag-pop-empty { font-size: 12.5px; color: var(--muted); padding: 2px 0 4px; }
+  .tag-pop-chip {
+    font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid transparent; cursor: pointer; line-height: 1.4;
+  }
+  .tag-pop-chip:hover { filter: brightness(1.06); }
+  .tag-pop-add { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .tag-pop-add input {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; outline: none;
+  }
+  .tag-pop-add input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
   .filter-bar {
     max-width: none; margin: 0 auto; padding: 0 28px;
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -523,13 +540,95 @@
     save(); render();
   }
 
-  function editTags(id) {
+  // ---- Tag picker (selectable existing tags) ----
+  function allTags() {
+    var seen = {}, out = [];
+    state.dump.concat(state.today, state.done).forEach(function (t) {
+      (t.tags || []).forEach(function (tag) { if (!seen[tag]) { seen[tag] = 1; out.push(tag); } });
+    });
+    out.sort();
+    return out;
+  }
+  function toggleTaskTag(id, tag) {
     var t = findTask(id);
-    if (!t) return;
-    var v = prompt("Tags (space or comma separated, # optional):", (t.tags || []).join(" "));
-    if (v === null) return;
-    t.tags = parseTags(v);
+    if (!t || !tag) return;
+    var i = (t.tags || []).indexOf(tag);
+    if (i >= 0) t.tags.splice(i, 1);
+    else { t.tags = t.tags || []; t.tags.push(tag); }
     save(); render();
+    refreshTagPicker();   // keep the open panel in sync
+  }
+
+  var pickerTaskId = null, pickerEl = null;
+  function buildPickerEl() {
+    var el = document.createElement("div");
+    el.className = "tag-pop";
+    el.innerHTML =
+      '<div class="tag-pop-head">Tap a tag to add / remove</div>' +
+      '<div class="tag-pop-list"></div>' +
+      '<div class="tag-pop-add"><input type="text" placeholder="+ new tag, then Enter" /></div>';
+    document.body.appendChild(el);
+    el.addEventListener("mousedown", function (e) { e.stopPropagation(); }); // don't self-close
+    var input = el.querySelector("input");
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        var tags = parseTags(input.value);
+        if (tags.length && pickerTaskId) { tags.forEach(function (tg) {
+          var t = findTask(pickerTaskId);
+          if (t && (t.tags || []).indexOf(tg) < 0) toggleTaskTag(pickerTaskId, tg);
+        }); }
+        input.value = "";
+      } else if (e.key === "Escape") { closeTagPicker(); }
+    });
+    return el;
+  }
+  function refreshTagPicker() {
+    if (!pickerEl || pickerTaskId === null) return;
+    var t = findTask(pickerTaskId);
+    if (!t) { closeTagPicker(); return; }
+    var list = pickerEl.querySelector(".tag-pop-list");
+    list.innerHTML = "";
+    var tags = allTags();
+    if (!tags.length) {
+      var hint = document.createElement("div");
+      hint.className = "tag-pop-empty";
+      hint.textContent = "No tags yet — create one below.";
+      list.appendChild(hint);
+    }
+    tags.forEach(function (tag) {
+      var on = (t.tags || []).indexOf(tag) >= 0;
+      var hue = tagHue(tag);
+      var chip = document.createElement("button");
+      chip.className = "tag-pop-chip" + (on ? " on" : "");
+      chip.textContent = (on ? "✓ #" : "#") + tag;
+      chip.style.color = on ? "#fff" : "hsl(" + hue + ",55%,45%)";
+      chip.style.background = on ? "hsl(" + hue + ",60%,52%)" : "hsla(" + hue + ",60%,55%,0.12)";
+      chip.style.borderColor = "hsla(" + hue + ",60%,55%,0.55)";
+      chip.addEventListener("click", function (e) { e.stopPropagation(); toggleTaskTag(pickerTaskId, tag); });
+      list.appendChild(chip);
+    });
+  }
+  function openTagPicker(id, anchorEl) {
+    if (pickerTaskId === id && pickerEl) { closeTagPicker(); return; } // toggle off
+    if (!pickerEl) pickerEl = buildPickerEl();
+    pickerTaskId = id;
+    pickerEl.style.display = "block";
+    refreshTagPicker();
+    // position under the button, kept on-screen
+    var r = anchorEl.getBoundingClientRect();
+    var top = r.bottom + window.scrollY + 6;
+    var left = Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - 260);
+    pickerEl.style.top = top + "px";
+    pickerEl.style.left = Math.max(8, left) + "px";
+    setTimeout(function () { document.addEventListener("mousedown", outsideClose); }, 0);
+  }
+  function outsideClose(e) {
+    if (pickerEl && !pickerEl.contains(e.target)) closeTagPicker();
+  }
+  function closeTagPicker() {
+    if (pickerEl) pickerEl.style.display = "none";
+    pickerTaskId = null;
+    document.removeEventListener("mousedown", outsideClose);
   }
 
   function editText(id) {
@@ -640,18 +739,11 @@
 
     appendTagChips(row, t);
 
-    var editBtn = document.createElement("button");
-    editBtn.className = "edit-btn";
-    editBtn.textContent = "✏️";
-    editBtn.title = "Rename task";
-    editBtn.addEventListener("click", function (e) { e.stopPropagation(); editText(t.id); });
-    row.appendChild(editBtn);
-
     var tagBtn = document.createElement("button");
     tagBtn.className = "tag-edit";
     tagBtn.textContent = "🏷";
-    tagBtn.title = "Edit tags";
-    tagBtn.addEventListener("click", function (e) { e.stopPropagation(); editTags(t.id); });
+    tagBtn.title = "Add / pick tags";
+    tagBtn.addEventListener("click", function (e) { e.stopPropagation(); openTagPicker(t.id, tagBtn); });
     row.appendChild(tagBtn);
 
     var est = document.createElement("button");
