@@ -169,6 +169,11 @@
     padding: 3px 7px; border-radius: 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
   }
   .task .tag-edit:hover { color: var(--text); border-color: var(--accent); }
+  .task .edit-btn {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 3px 7px; border-radius: 7px; font-size: 11.5px; white-space: nowrap;
+  }
+  .task .edit-btn:hover { color: var(--text); border-color: var(--accent); }
   .filter-bar {
     max-width: 1080px; margin: 0 auto; padding: 0 20px;
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -522,6 +527,15 @@
     save(); render();
   }
 
+  function editText(id) {
+    var t = findTask(id) || (function () { var i = indexById(state.done, id); return i >= 0 ? state.done[i] : null; })();
+    if (!t) return;
+    var v = prompt("Edit task name:", t.text);
+    if (v === null) return;          // cancelled
+    v = v.trim();
+    if (v) { t.text = v; save(); render(); }   // ignore empty
+  }
+
   // ---- Tag filtering ----
   var activeFilter = null;
   function setFilter(tag) { activeFilter = tag || null; render(); }
@@ -614,11 +628,19 @@
     var label = document.createElement("span");
     label.className = "label" + (t.done ? " done" : "");
     label.textContent = t.text;
-    label.title = "Click to mark done / undone";
+    label.title = "Click to mark done / undone · double-click to rename";
     label.addEventListener("click", function (e) { e.stopPropagation(); toggleDone(t.id); });
+    label.addEventListener("dblclick", function (e) { e.stopPropagation(); editText(t.id); });
     row.appendChild(label);
 
     appendTagChips(row, t);
+
+    var editBtn = document.createElement("button");
+    editBtn.className = "edit-btn";
+    editBtn.textContent = "✏️";
+    editBtn.title = "Rename task";
+    editBtn.addEventListener("click", function (e) { e.stopPropagation(); editText(t.id); });
+    row.appendChild(editBtn);
 
     var tagBtn = document.createElement("button");
     tagBtn.className = "tag-edit";
@@ -713,6 +735,9 @@
     var label = document.createElement("span");
     label.className = "label done";
     label.textContent = t.text;
+    label.title = "Double-click to rename";
+    label.style.cursor = "text";
+    label.addEventListener("dblclick", function () { editText(t.id); });
     row.appendChild(label);
 
     appendTagChips(row, t);
