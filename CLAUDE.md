@@ -49,7 +49,10 @@ sound. Built for personal daily use.
 
 ## Code map (within `index.html`)
 
-- `<style>` — all CSS; theming via CSS custom properties on `[data-theme]`.
+- `<style>` — all CSS; theming via CSS custom properties on `[data-theme]`. Design system is
+  "Calm Minimal": soft indigo accent (`--accent`), `--accent-soft` tint for the active/top task
+  and focus rings, light airy palette (light theme is primary) + a calm-dark counterpart.
+  `--accent-2` (warm coral) is reserved for the brand "Funnel" word, matching the app icon.
 - `<script>` IIFE:
   - State + persistence: `defaults()`, `loadState()`, `save()`, `normalizeTask()`.
   - Task ops: `addTask`, `moveTask`, `deleteTask`, `toggleDone`, `editEst`, sub-task fns.

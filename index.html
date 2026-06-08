@@ -11,7 +11,7 @@
 
 <!-- Installable web app (Add to Home Screen) -->
 <link rel="manifest" href="manifest.webmanifest" />
-<meta name="theme-color" id="themeColorMeta" content="#0f1117" />
+<meta name="theme-color" id="themeColorMeta" content="#111319" />
 
 <!-- iOS home-screen app support -->
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -20,31 +20,35 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Focus Funnel" />
 <style>
+  /* Calm Minimal — dark counterpart */
   :root {
-    --bg: #0f1117;
-    --app-bg: radial-gradient(1200px 800px at 80% -10%, #1b2030 0%, #0f1117 55%);
-    --panel: #1a1d27;
-    --panel-2: #232735;
-    --line: #2e3344;
-    --text: #e7e9f0;
+    --bg: #111319;
+    --app-bg: radial-gradient(1200px 800px at 80% -12%, #1b1f2b 0%, #111319 58%);
+    --panel: #181b24;
+    --panel-2: #20242f;
+    --line: #2a2f3d;
+    --text: #e9ebf2;
     --muted: #8b90a3;
-    --accent: #6c8cff;
-    --accent-2: #ff7a59;
+    --accent: #818cf8;
+    --accent-soft: rgba(129,140,248,.16);
+    --accent-2: #ff8a6b;
     --good: #3ecf8e;
-    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --shadow: 0 10px 30px rgba(0,0,0,.30);
   }
+  /* Calm Minimal — light (primary) */
   [data-theme="light"] {
-    --bg: #f4f6fb;
-    --app-bg: radial-gradient(1200px 800px at 80% -10%, #ffffff 0%, #eef1f8 55%);
+    --bg: #f6f7f9;
+    --app-bg: radial-gradient(1200px 760px at 78% -16%, #ffffff 0%, #f4f5f9 62%);
     --panel: #ffffff;
-    --panel-2: #eef1f8;
-    --line: #dde2ee;
-    --text: #1c2030;
-    --muted: #6b7186;
-    --accent: #4f6fff;
-    --accent-2: #ff6a43;
-    --good: #19b877;
-    --shadow: 0 10px 30px rgba(40,50,80,.10);
+    --panel-2: #f7f8fb;
+    --line: #ecedf3;
+    --text: #1f2430;
+    --muted: #9197a8;
+    --accent: #6366f1;
+    --accent-soft: rgba(99,102,241,.10);
+    --accent-2: #ff7a59;
+    --good: #16a86f;
+    --shadow: 0 6px 24px rgba(30,40,80,.07);
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -111,7 +115,7 @@
     width: 64px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
     border-radius: 10px; padding: 11px 10px; font-size: 14px; outline: none; text-align: center;
   }
-  .add-row input:focus { border-color: var(--accent); }
+  .add-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   input::placeholder { color: var(--muted); }
 
   button {
@@ -127,14 +131,15 @@
   ul.list { list-style: none; margin: 0; padding: 0; min-height: 40px; }
 
   li.task {
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px;
-    margin-bottom: 9px; transition: border-color .15s ease, opacity .15s ease, transform .12s ease, box-shadow .15s;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    border-left: 3px solid transparent;
+    margin-bottom: 10px; transition: border-color .15s ease, opacity .15s ease, transform .12s ease, box-shadow .15s, background .15s;
   }
   li.task.dragging { opacity: .35; }
-  li.task.in-today { border-left: 3px solid var(--accent-2); }
-  li.task.is-top { border-left: 3px solid var(--good); box-shadow: 0 0 0 1px rgba(62,207,142,.25) inset; }
+  li.task.in-today { border-left-color: var(--line); }
+  li.task.is-top { border-left-color: var(--accent); background: var(--accent-soft); }
 
-  .task .row { display: flex; align-items: center; gap: 9px; padding: 10px 12px; cursor: grab; flex-wrap: wrap; }
+  .task .row { display: flex; align-items: center; gap: 9px; padding: 12px 13px; cursor: grab; flex-wrap: wrap; }
   .task .row:active { cursor: grabbing; }
   .task .grip { color: var(--muted); font-size: 15px; line-height: 1; user-select: none; }
   .task .expand {
@@ -298,7 +303,7 @@
   <!-- Today funnel -->
   <section class="card">
     <h2>Today <span class="count" id="todayCount">0 / 3</span></h2>
-    <p class="hint">Only 3 fit. Drag to reorder — the top task (green) is what the timer runs.</p>
+    <p class="hint">Only 3 fit. Drag to reorder — the highlighted top task is what the timer runs.</p>
     <div class="funnel-drop" id="todayDrop">
       <ul class="list" id="today"></ul>
       <div class="empty" id="todayEmpty">Drag up to 3 tasks here</div>
@@ -1062,7 +1067,7 @@
     document.documentElement.setAttribute("data-theme", state.theme);
     $("themeToggle").textContent = state.theme === "dark" ? "🌙 Dark" : "☀️ Light";
     var meta = document.getElementById("themeColorMeta");
-    if (meta) meta.setAttribute("content", state.theme === "dark" ? "#0f1117" : "#f4f6fb");
+    if (meta) meta.setAttribute("content", state.theme === "dark" ? "#111319" : "#f6f7f9");
   }
   function toggleTheme() {
     state.theme = state.theme === "dark" ? "light" : "dark";
