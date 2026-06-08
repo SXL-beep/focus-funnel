@@ -85,6 +85,7 @@
   }
   .stat.streak { color: var(--accent-2); }
   .stat.done { color: var(--good); }
+  .stat.session { color: var(--accent); }
 
   .wrap {
     max-width: none; margin: 0 auto; padding: 14px 28px 40px;
@@ -278,6 +279,22 @@
   li.done-item { border-left: 3px solid var(--good); }
   li.done-item .done-check { color: var(--good); font-size: 15px; font-weight: 700; }
   li.done-item .when { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+
+  /* Focus log */
+  .log-card { grid-column: 1 / -1; }
+  .log-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .log-summary .ls-pill {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--text);
+  }
+  .log-day { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--muted); margin: 10px 0 6px; }
+  .log-day:first-child { margin-top: 0; }
+  li.log-item { border-left: 3px solid var(--accent); }
+  li.log-item .row { cursor: default; }
+  li.log-item .log-time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); min-width: 52px; }
+  li.log-item .log-mins { font-size: 11.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  li.log-item .log-task { flex: 1 1 auto; min-width: 100px; color: var(--muted); font-size: 13.5px; }
   .timer-card { grid-column: 1 / -1; text-align: center; }
   .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 3px; min-height: 16px; }
   .timer-task { font-size: 17px; font-weight: 600; margin: 2px 0 8px; min-height: 22px; }
@@ -334,6 +351,7 @@
   <div class="stats">
     <span class="stat streak" id="streakStat">🔥 0 day streak</span>
     <span class="stat done" id="todayStat">✅ 0 done today</span>
+    <span class="stat session" id="sessionStat">⏱ 0 sessions today</span>
   </div>
 </header>
 
@@ -403,6 +421,15 @@
     <ul class="list" id="doneList"></ul>
     <div class="empty" id="doneEmpty">Nothing finished yet — run the timer and hit “✓ Finish top task”.</div>
   </section>
+
+  <!-- Focus session log -->
+  <section class="card log-card">
+    <h2>Focus Log <span class="count" id="logCount">0</span></h2>
+    <p class="hint">Every completed focus session, newest first. · <span class="clear-done" id="clearLog" title="Clear the focus log">clear log</span></p>
+    <div class="log-summary" id="logSummary"></div>
+    <ul class="list" id="logList"></ul>
+    <div class="empty" id="logEmpty">No focus sessions yet — run a <b>Focus 25</b> all the way to the alarm.</div>
+  </section>
 </div>
 
 <footer>
@@ -436,7 +463,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
+    return { dump: [], today: [], done: [], sessions: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -448,6 +475,11 @@
     if (Array.isArray(p.dump)) s.dump = p.dump.map(normalizeTask);
     if (Array.isArray(p.today)) s.today = p.today.map(normalizeTask);
     if (Array.isArray(p.done)) s.done = p.done.map(normalizeDone);
+    if (Array.isArray(p.sessions)) s.sessions = p.sessions.filter(function (x) {
+      return x && typeof x.ts === "number";
+    }).map(function (x) {
+      return { ts: x.ts, mins: (typeof x.mins === "number" ? x.mins : 25), task: String(x.task || "") };
+    });
     if (p.mode) s.mode = p.mode;
     if (p.theme) s.theme = p.theme;
     if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
@@ -866,20 +898,39 @@
   }
   function recordCompletion(delta) { recordCompletionOn(todayKey(), delta); }
   function completedToday() { return state.stats.dates[todayKey()] || 0; }
+
+  // A day is "active" (counts for the streak) if you completed a task OR a focus session.
+  function activeDaySet() {
+    var set = {};
+    Object.keys(state.stats.dates).forEach(function (k) { if (state.stats.dates[k] > 0) set[k] = 1; });
+    state.sessions.forEach(function (s) { set[keyOf(new Date(s.ts))] = 1; });
+    return set;
+  }
   function computeStreak() {
-    var dates = state.stats.dates;
+    var active = activeDaySet();
     var day = new Date();
-    // If nothing done yet today, the streak isn't broken — count from yesterday.
-    if (!(dates[keyOf(day)] > 0)) day.setDate(day.getDate() - 1);
+    if (!active[keyOf(day)]) day.setDate(day.getDate() - 1); // today not done yet ≠ broken
     var count = 0;
-    while (dates[keyOf(day)] > 0) { count++; day.setDate(day.getDate() - 1); }
+    while (active[keyOf(day)]) { count++; day.setDate(day.getDate() - 1); }
     return count;
+  }
+  function sessionsToday() {
+    var k = todayKey();
+    return state.sessions.filter(function (s) { return keyOf(new Date(s.ts)) === k; });
+  }
+  function recordSession(mins, task) {
+    state.sessions.push({ ts: Date.now(), mins: mins, task: task || "" });
   }
   function renderStats() {
     var streak = computeStreak();
     var done = completedToday();
+    var sess = sessionsToday();
+    var mins = sess.reduce(function (a, s) { return a + (s.mins || 0); }, 0);
     $("streakStat").textContent = "🔥 " + streak + " day" + (streak === 1 ? "" : "s") + " streak";
+    $("streakStat").title = "Consecutive days you focused (completed a task or a focus session).";
     $("todayStat").textContent = "✅ " + done + " done today";
+    $("sessionStat").textContent = "⏱ " + sess.length + " session" + (sess.length === 1 ? "" : "s") +
+      (mins ? " · " + mins + "m" : "") + " today";
   }
 
   // ---- Rendering ----
@@ -1055,7 +1106,62 @@
     renderFilterBar();
     updateBulkBar();
     renderStats();
+    renderLog();
     updateTimerTask();
+  }
+
+  // ---- Focus log rendering ----
+  function fmtTime(d) {
+    var h = d.getHours(), m = d.getMinutes(), ap = h < 12 ? "am" : "pm";
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ":" + ("0" + m).slice(-2) + ap;
+  }
+  function dayLabel(d) {
+    var today = new Date(), y = new Date(); y.setDate(y.getDate() - 1);
+    if (keyOf(d) === keyOf(today)) return "Today";
+    if (keyOf(d) === keyOf(y)) return "Yesterday";
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  }
+  function partOfDay(h) { return h < 12 ? "🌅 morning" : (h < 17 ? "☀️ afternoon" : "🌙 evening"); }
+
+  function renderLog() {
+    var listEl = $("logList");
+    listEl.innerHTML = "";
+    $("logCount").textContent = state.sessions.length;
+    $("logEmpty").style.display = state.sessions.length ? "none" : "block";
+
+    // summary: today's count + minutes + time-of-day split
+    var sum = $("logSummary"); sum.innerHTML = "";
+    var sess = sessionsToday();
+    if (sess.length) {
+      var mins = sess.reduce(function (a, s) { return a + (s.mins || 0); }, 0);
+      var parts = { "🌅 morning": 0, "☀️ afternoon": 0, "🌙 evening": 0 };
+      sess.forEach(function (s) { parts[partOfDay(new Date(s.ts).getHours())]++; });
+      var pills = ["Today: " + sess.length + " session" + (sess.length === 1 ? "" : "s"), mins + " focus min"];
+      Object.keys(parts).forEach(function (p) { if (parts[p]) pills.push(p + " " + parts[p]); });
+      pills.forEach(function (txt) {
+        var el = document.createElement("span"); el.className = "ls-pill"; el.textContent = txt; sum.appendChild(el);
+      });
+    }
+
+    // list newest first, grouped by day (cap at 60 rows)
+    var items = state.sessions.slice().sort(function (a, b) { return b.ts - a.ts; }).slice(0, 60);
+    var lastDay = null;
+    items.forEach(function (s) {
+      var d = new Date(s.ts), dk = keyOf(d);
+      if (dk !== lastDay) {
+        lastDay = dk;
+        var hdr = document.createElement("div"); hdr.className = "log-day"; hdr.textContent = dayLabel(d);
+        listEl.appendChild(hdr);
+      }
+      var li = document.createElement("li"); li.className = "task log-item";
+      var row = document.createElement("div"); row.className = "row";
+      var time = document.createElement("span"); time.className = "log-time"; time.textContent = fmtTime(d); row.appendChild(time);
+      var mins = document.createElement("span"); mins.className = "log-mins"; mins.textContent = (s.mins || 25) + "m"; row.appendChild(mins);
+      var task = document.createElement("span"); task.className = "log-task"; task.textContent = s.task || "(focus session)"; row.appendChild(task);
+      li.appendChild(row);
+      listEl.appendChild(li);
+    });
   }
 
   function renderFilterBar() {
@@ -1169,6 +1275,11 @@
   function finishTimer() {
     pauseTimer();
     alarm();
+    if (state.mode === "focus") {
+      var top = topTask();
+      recordSession(Math.round(MODES.focus / 60), top ? top.text : "");
+      save(); render();   // log it + refresh stats/log
+    }
     flashBanner(state.mode === "focus" ? "Focus session done! Take a break ☕" : "Break over — back to it 💪");
   }
   function flashBanner(msg) { $("timerTop").textContent = msg; setTimeout(updateTimerTask, 4000); }
@@ -1401,6 +1512,12 @@
     save(); setMode("focus"); render();
   });
   $("clearDone").addEventListener("click", clearDoneList);
+  $("clearLog").addEventListener("click", function () {
+    if (!state.sessions.length) return;
+    if (!confirm("Clear the focus log? This removes the session history (and its contribution to your streak).")) return;
+    state.sessions = [];
+    save(); render();
+  });
 
   // Select / bulk-tag controls
   $("selectToggle").addEventListener("click", toggleSelectMode);

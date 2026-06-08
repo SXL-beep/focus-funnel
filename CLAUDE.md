@@ -44,7 +44,13 @@ sound. Built for personal daily use.
   "N selected" + 🏷 Tag (opens the picker in `pickerMode="bulk"`, applying tags to all selected),
   Clear, and Done. Ephemeral `selectMode`/`selected` (not persisted).
 - **Pomodoro timer** — Focus 25 / Break 5 / Long 15 modes. Spacebar toggles start/pause.
-- **Completed-today counter & streak** (consecutive days with >=1 completion).
+- **Completed-today counter & streak.** Streak = consecutive days that are "active" =
+  a day with >=1 task completion OR >=1 completed focus session (`activeDaySet()`), so
+  using the timer keeps the streak alive even without finishing a task.
+- **Focus session tracking.** When a Focus-mode timer reaches 0, a session is recorded
+  (`state.sessions: [{ts, mins, task}]`). Stats show "⏱ N sessions today"; a Focus Log card
+  lists every session newest-first grouped by day (time-of-day + duration + task), with a
+  today summary (count, focus minutes, morning/afternoon/evening split). "clear log" empties it.
 - **Done list** — finishing the top task archives it to `state.done` (newest first) instead
   of deleting it; each item can be **↩ Restored** (un-finishes, returns to Brain Dump,
   decrements the completion credit for its `doneDate`) or removed (keeps the credit).
