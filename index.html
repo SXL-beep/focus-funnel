@@ -142,6 +142,7 @@
   li.task.is-top { border-left-color: var(--accent); background: var(--accent-soft); }
 
   .task .row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: grab; flex-wrap: wrap; }
+  .task .ctrl { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
   .task .row:active { cursor: grabbing; }
   .task .grip { color: var(--muted); font-size: 15px; line-height: 1; user-select: none; }
   .task .expand {
@@ -1044,21 +1045,26 @@
     label.addEventListener("dblclick", function (e) { e.stopPropagation(); editText(t.id); });
     row.appendChild(label);
 
-    appendTagChips(row, t);
+    // All trailing controls live in one right-aligned group, so they fit on
+    // the line or wrap together as a unit — never one pill stranded alone.
+    var ctrl = document.createElement("span");
+    ctrl.className = "ctrl";
+
+    appendTagChips(ctrl, t);
 
     var tagBtn = document.createElement("button");
     tagBtn.className = "tag-edit";
     tagBtn.textContent = "🏷";
     tagBtn.title = "Add / pick tags";
     tagBtn.addEventListener("click", function (e) { e.stopPropagation(); openTagPicker(t.id, tagBtn); });
-    row.appendChild(tagBtn);
+    ctrl.appendChild(tagBtn);
 
     var est = document.createElement("button");
     est.className = "est" + (t.est ? " set" : "");
     est.textContent = t.est ? t.est + "m" : "+est";
     est.title = "Set time estimate";
     est.addEventListener("click", function (e) { e.stopPropagation(); editEst(t.id); });
-    row.appendChild(est);
+    ctrl.appendChild(est);
 
     var move = document.createElement("button");
     move.className = "mini";
@@ -1067,12 +1073,14 @@
       e.stopPropagation();
       moveTask(t.id, isInToday ? "dump" : "today");
     });
-    row.appendChild(move);
+    ctrl.appendChild(move);
 
     var x = document.createElement("button");
     x.className = "x"; x.textContent = "×"; x.title = "Delete";
     x.addEventListener("click", function (e) { e.stopPropagation(); deleteTask(t.id); });
-    row.appendChild(x);
+    ctrl.appendChild(x);
+
+    row.appendChild(ctrl);
 
     // drag
     row.addEventListener("dragstart", function (e) {
@@ -1144,25 +1152,29 @@
     label.addEventListener("dblclick", function () { editText(t.id); });
     row.appendChild(label);
 
-    appendTagChips(row, t);
+    var ctrl = document.createElement("span");
+    ctrl.className = "ctrl";
+
+    appendTagChips(ctrl, t);
 
     var when = document.createElement("span");
     when.className = "when";
     when.textContent = t.doneDate === todayKey() ? "today" : (t.doneDate || "");
-    row.appendChild(when);
+    ctrl.appendChild(when);
 
     var restore = document.createElement("button");
     restore.className = "mini";
     restore.textContent = "↩ Restore";
     restore.title = "Move back to Brain Dump (un-finish)";
     restore.addEventListener("click", function () { restoreDone(t.id); });
-    row.appendChild(restore);
+    ctrl.appendChild(restore);
 
     var x = document.createElement("button");
     x.className = "x"; x.textContent = "×"; x.title = "Remove from list (keeps your streak)";
     x.addEventListener("click", function () { deleteDone(t.id); });
-    row.appendChild(x);
+    ctrl.appendChild(x);
 
+    row.appendChild(ctrl);
     li.appendChild(row);
     return li;
   }
