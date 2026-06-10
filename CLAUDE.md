@@ -31,6 +31,9 @@ sound. Built for personal daily use.
 ## Features
 
 - **Brain Dump → Today funnel** with drag-and-drop; max 3 tasks in Today.
+- **Notepad** — sticky-note scratch space (`state.notes: [{id, text}]`) below the funnel.
+  Quick capture before organizing; each note has **→ To-do** (converts to a Brain Dump
+  task, parsing inline #tags) and ×; double-click a note to edit.
 - **Drag-to-reorder within Today** — the top task (green border) is what the timer runs.
 - **Sub-tasks** per task (expandable checklist with progress count).
 - **Time estimates** per task (minutes); Today header sums them.

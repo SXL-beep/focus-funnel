@@ -312,6 +312,24 @@
   li.log-item .log-time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); min-width: 52px; }
   li.log-item .log-mins { font-size: 11.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
   li.log-item .log-task { flex: 1 1 auto; min-width: 100px; color: var(--muted); font-size: 13.5px; }
+  /* Notepad */
+  .notes-card { grid-column: 1 / -1; }
+  .notes-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .note {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(250,204,21,.09); border: 1px solid rgba(250,204,21,.30);
+    border-radius: 11px; padding: 9px 11px; flex: 0 1 auto; min-width: 170px; max-width: 340px;
+  }
+  [data-theme="light"] .note { background: #fffbeb; border-color: #f0e0ad; }
+  .note .ntext { flex: 1; font-size: 13.5px; color: var(--text); overflow-wrap: anywhere; cursor: text; line-height: 1.45; }
+  .note .mini {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 3px 8px; border-radius: 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .note .mini:hover { color: var(--text); border-color: var(--accent); }
+  .note .x { background: transparent; border: none; color: var(--muted); padding: 0 4px; font-size: 15px; }
+  .note .x:hover { color: var(--accent-2); }
+
   /* Performance dashboard */
   .perf-card { grid-column: 1 / -1; }
   .perf-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
@@ -426,6 +444,18 @@
     </div>
   </section>
 
+  <!-- Notepad -->
+  <section class="card notes-card">
+    <h2>Notepad <span class="count" id="noteCount">0</span></h2>
+    <p class="hint">Jot quick thoughts here first. Send the keepers to your to-do list with <b>→ To-do</b> (#tags carry over). Double-click a note to edit it.</p>
+    <div class="add-row">
+      <input id="noteInput" class="text" type="text" placeholder="Quick note… hit Enter" autocomplete="off" />
+      <button id="noteAddBtn">Add note</button>
+    </div>
+    <div class="notes-grid" id="notesGrid"></div>
+    <div class="empty" id="notesEmpty">Nothing jotted yet — this is your scratch space.</div>
+  </section>
+
   <!-- Timer -->
   <section class="card timer-card">
     <div class="mode-pills">
@@ -524,7 +554,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], sessions: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
+    return { dump: [], today: [], done: [], sessions: [], notes: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -536,6 +566,9 @@
     if (Array.isArray(p.dump)) s.dump = p.dump.map(normalizeTask);
     if (Array.isArray(p.today)) s.today = p.today.map(normalizeTask);
     if (Array.isArray(p.done)) s.done = p.done.map(normalizeDone);
+    if (Array.isArray(p.notes)) s.notes = p.notes.map(function (n) {
+      return { id: (n && n.id) || uid(), text: String((n && n.text) || "") };
+    }).filter(function (n) { return n.text; });
     if (Array.isArray(p.sessions)) s.sessions = p.sessions.filter(function (x) {
       return x && typeof x.ts === "number";
     }).map(function (x) {
@@ -640,6 +673,62 @@
     if (!parsed.text) return;
     state.dump.push({ id: uid(), text: parsed.text, done: false, est: est || null, tags: parsed.tags, expanded: false, subtasks: [] });
     save(); render();
+  }
+
+  // ---- Notepad (scratch notes -> tasks) ----
+  function addNote(text) {
+    text = (text || "").trim();
+    if (!text) return;
+    state.notes.push({ id: uid(), text: text });
+    save(); render();
+  }
+  function deleteNote(id) {
+    var i = indexById(state.notes, id);
+    if (i >= 0) { state.notes.splice(i, 1); save(); render(); }
+  }
+  function editNote(id) {
+    var i = indexById(state.notes, id);
+    if (i < 0) return;
+    var v = prompt("Edit note:", state.notes[i].text);
+    if (v === null) return;
+    v = v.trim();
+    if (v) { state.notes[i].text = v; save(); render(); }
+  }
+  function noteToTask(id) {
+    var i = indexById(state.notes, id);
+    if (i < 0) return;
+    var parsed = extractInlineTags(state.notes[i].text);
+    if (!parsed.text) return;
+    state.dump.push({ id: uid(), text: parsed.text, done: false, est: null, tags: parsed.tags, expanded: false, subtasks: [] });
+    state.notes.splice(i, 1);
+    save(); render();
+  }
+  function renderNotes() {
+    var grid = $("notesGrid");
+    grid.innerHTML = "";
+    $("noteCount").textContent = state.notes.length;
+    $("notesEmpty").style.display = state.notes.length ? "none" : "block";
+    state.notes.forEach(function (n) {
+      var el = document.createElement("div");
+      el.className = "note";
+      var txt = document.createElement("span");
+      txt.className = "ntext";
+      txt.textContent = n.text;
+      txt.title = "Double-click to edit";
+      txt.addEventListener("dblclick", function () { editNote(n.id); });
+      el.appendChild(txt);
+      var conv = document.createElement("button");
+      conv.className = "mini";
+      conv.textContent = "→ To-do";
+      conv.title = "Move this note into the Brain Dump as a task";
+      conv.addEventListener("click", function () { noteToTask(n.id); });
+      el.appendChild(conv);
+      var x = document.createElement("button");
+      x.className = "x"; x.textContent = "×"; x.title = "Delete note";
+      x.addEventListener("click", function () { deleteNote(n.id); });
+      el.appendChild(x);
+      grid.appendChild(el);
+    });
   }
 
   // Move a task into a list at a position (before beforeId, or end).
@@ -1199,6 +1288,7 @@
     renderFilterBar();
     updateBulkBar();
     renderStats();
+    renderNotes();
     renderLog();
     renderPerf();
     updateTimerTask();
@@ -1723,6 +1813,12 @@
   // Select / bulk-tag controls
   $("selectToggle").addEventListener("click", toggleSelectMode);
   $("sortPri").addEventListener("click", sortDumpByPriority);
+
+  // Notepad controls
+  $("noteAddBtn").addEventListener("click", function () { addNote($("noteInput").value); $("noteInput").value = ""; $("noteInput").focus(); });
+  $("noteInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { addNote($("noteInput").value); $("noteInput").value = ""; }
+  });
   $("bulkClearBtn").addEventListener("click", function () { selected = {}; render(); });
   $("bulkDoneBtn").addEventListener("click", exitSelectMode);
   $("bulkTagBtn").addEventListener("click", function (e) {
