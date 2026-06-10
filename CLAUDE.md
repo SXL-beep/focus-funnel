@@ -34,6 +34,8 @@ sound. Built for personal daily use.
 - **Drag-to-reorder within Today** — the top task (green border) is what the timer runs.
 - **Sub-tasks** per task (expandable checklist with progress count).
 - **Time estimates** per task (minutes); Today header sums them.
+- **Priority grading** per task — ⚑ flag cycles none → P1 (red) → P2 (amber) → P3 (blue);
+  stored as `pri: 1|2|3|null`. "⇅ Priority" in the Brain Dump header sorts the dump P1-first.
 - **Tags** per task — type `#tag` inline when adding (parsed out of the text), or click the 🏷
   pill to open a **tag picker** popover: all existing tags shown as selectable chips (click to
   add/remove), plus an input to create a new one. Tags render as deterministically-colored chips;

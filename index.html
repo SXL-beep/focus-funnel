@@ -177,6 +177,22 @@
   }
   .task .tag-edit:hover { color: var(--text); border-color: var(--accent); }
 
+  /* Priority flag */
+  .pri-btn {
+    background: transparent; border: 1px dashed var(--line); color: var(--muted);
+    padding: 3px 8px; border-radius: 7px; font-size: 11px; font-weight: 800; white-space: nowrap;
+  }
+  .pri-btn:hover { border-color: var(--accent); color: var(--text); }
+  .pri-btn.p1 { background: rgba(239,68,68,.12); color: #ef4444; border: 1px solid rgba(239,68,68,.55); }
+  .pri-btn.p2 { background: rgba(245,158,11,.14); color: #d97706; border: 1px solid rgba(245,158,11,.55); }
+  .pri-btn.p3 { background: rgba(59,130,246,.12); color: #3b82f6; border: 1px solid rgba(59,130,246,.55); }
+  [data-theme="dark"] .pri-btn.p2 { color: #fbbf24; }
+  .sort-pri {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: none;
+  }
+  .sort-pri:hover { color: var(--text); border-color: var(--accent); }
+
   /* Tag picker popover */
   .tag-pop {
     position: absolute; display: none; z-index: 50; width: 248px;
@@ -295,6 +311,35 @@
   li.log-item .log-time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); min-width: 52px; }
   li.log-item .log-mins { font-size: 11.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
   li.log-item .log-task { flex: 1 1 auto; min-width: 100px; color: var(--muted); font-size: 13.5px; }
+  /* Performance dashboard */
+  .perf-card { grid-column: 1 / -1; }
+  .perf-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .perf-stat {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 14px; min-width: 96px;
+  }
+  .perf-stat .ps-num { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1.1; }
+  .perf-stat .ps-num .ps-unit { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .perf-stat .ps-label { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .4px; }
+  .perf-grid-title { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 8px; letter-spacing: .3px; }
+  .perf-grid-wrap { margin-bottom: 16px; }
+  .heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
+  .hm-col { display: flex; flex-direction: column; gap: 3px; }
+  .hm-cell { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; background: var(--panel-2); border: 1px solid var(--line); }
+  .hm-cell.future { visibility: hidden; }
+  .hm-cell.lvl0 { background: var(--panel-2); }
+  .hm-cell.lvl1 { background: hsla(244,80%,62%,.30); border-color: transparent; }
+  .hm-cell.lvl2 { background: hsla(244,80%,62%,.52); border-color: transparent; }
+  .hm-cell.lvl3 { background: hsla(244,80%,60%,.74); border-color: transparent; }
+  .hm-cell.lvl4 { background: hsl(244,80%,60%); border-color: transparent; }
+  .hm-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .hm-legend .hm-cell { width: 12px; height: 12px; }
+  .tod-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .tod-row .tod-label { width: 110px; font-size: 12.5px; color: var(--text); flex-shrink: 0; }
+  .tod-row .tod-track { flex: 1; height: 14px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+  .tod-row .tod-fill { height: 100%; background: var(--accent); border-radius: 999px; min-width: 2px; }
+  .tod-row .tod-val { width: 70px; text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; flex-shrink: 0; }
+
   .timer-card { grid-column: 1 / -1; text-align: center; }
   .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 3px; min-height: 16px; }
   .timer-task { font-size: 17px; font-weight: 600; margin: 2px 0 8px; min-height: 22px; }
@@ -360,7 +405,7 @@
 <div class="wrap">
   <!-- Brain dump -->
   <section class="card">
-    <h2>Brain Dump <span class="h2-right"><button class="select-toggle" id="selectToggle">☑ Select</button> <span class="count" id="dumpCount">0</span></span></h2>
+    <h2>Brain Dump <span class="h2-right"><button class="sort-pri" id="sortPri" title="Sort by priority (P1 first)">⇅ Priority</button><button class="select-toggle" id="selectToggle">☑ Select</button> <span class="count" id="dumpCount">0</span></span></h2>
     <p class="hint">Get every loose thought out of your head. Add <b>#tags</b> (e.g. “Email Sam #work”). Drag the important ones right →</p>
     <div class="add-row">
       <input id="dumpInput" class="text" type="text" placeholder="Add a task…  use #tags" autocomplete="off" />
@@ -411,6 +456,21 @@
         <input type="range" id="volume" min="0" max="100" step="1" />
         <span class="sound-lbl" id="volPct">50%</span>
       </label>
+    </div>
+  </section>
+
+  <!-- Performance dashboard -->
+  <section class="card perf-card">
+    <h2>Performance</h2>
+    <div class="perf-summary" id="perfSummary"></div>
+    <div class="perf-grid-wrap">
+      <div class="perf-grid-title">Activity — focus sessions &amp; tasks per day (last 18 weeks)</div>
+      <div class="heatmap" id="heatmap"></div>
+      <div class="hm-legend">Less <span class="hm-cell lvl0"></span><span class="hm-cell lvl1"></span><span class="hm-cell lvl2"></span><span class="hm-cell lvl3"></span><span class="hm-cell lvl4"></span> More</div>
+    </div>
+    <div class="perf-tod">
+      <div class="perf-grid-title">When you focus</div>
+      <div id="todBars"></div>
     </div>
   </section>
 
@@ -504,6 +564,7 @@
       text: String(t.text || ""),
       done: !!t.done,
       est: (typeof t.est === "number" && t.est > 0) ? t.est : null,
+      pri: (t.pri === 1 || t.pri === 2 || t.pri === 3) ? t.pri : null,
       tags: Array.isArray(t.tags) ? parseTags(t.tags.join(" ")) : [],
       expanded: !!t.expanded,
       subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
@@ -611,6 +672,19 @@
     v = v.trim();
     if (v === "") { t.est = null; }
     else { var n = parseInt(v, 10); if (!isNaN(n) && n > 0) t.est = n; }
+    save(); render();
+  }
+
+  // ---- Priority (none -> P1 -> P2 -> P3 -> none) ----
+  var PRI = { 1: "P1", 2: "P2", 3: "P3" };
+  function cyclePri(id) {
+    var t = findTask(id);
+    if (!t) return;
+    t.pri = t.pri === null || t.pri === undefined ? 1 : (t.pri >= 3 ? null : t.pri + 1);
+    save(); render();
+  }
+  function sortDumpByPriority() {
+    state.dump.sort(function (a, b) { return (a.pri || 9) - (b.pri || 9); });
     save(); render();
   }
 
@@ -955,6 +1029,13 @@
     exp.addEventListener("click", function (e) { e.stopPropagation(); toggleExpand(t.id); });
     row.appendChild(exp);
 
+    var pri = document.createElement("button");
+    pri.className = "pri-btn" + (t.pri ? " p" + t.pri : "");
+    pri.textContent = t.pri ? "⚑ " + PRI[t.pri] : "⚑";
+    pri.title = "Priority — click to cycle (P1 high → P2 → P3 → none)";
+    pri.addEventListener("click", function (e) { e.stopPropagation(); cyclePri(t.id); });
+    row.appendChild(pri);
+
     var label = document.createElement("span");
     label.className = "label" + (t.done ? " done" : "");
     label.textContent = t.text;
@@ -1107,7 +1188,80 @@
     updateBulkBar();
     renderStats();
     renderLog();
+    renderPerf();
     updateTimerTask();
+  }
+
+  // ---- Performance dashboard rendering ----
+  function renderPerf() {
+    var sessByDay = {}, minsByDay = {};
+    state.sessions.forEach(function (s) {
+      var k = keyOf(new Date(s.ts));
+      sessByDay[k] = (sessByDay[k] || 0) + 1;
+      minsByDay[k] = (minsByDay[k] || 0) + (s.mins || 0);
+    });
+    function score(k) { return (state.stats.dates[k] || 0) + (sessByDay[k] || 0); }
+    function level(sc) { return sc <= 0 ? 0 : sc === 1 ? 1 : sc <= 3 ? 2 : sc <= 5 ? 3 : 4; }
+
+    // summary stats
+    var totalSessions = state.sessions.length;
+    var totalMins = state.sessions.reduce(function (a, s) { return a + (s.mins || 0); }, 0);
+    var totalTasks = Object.keys(state.stats.dates).reduce(function (a, k) { return a + (state.stats.dates[k] || 0); }, 0);
+    var bestMin = 0; Object.keys(minsByDay).forEach(function (k) { if (minsByDay[k] > bestMin) bestMin = minsByDay[k]; });
+    var weekMin = 0; for (var i = 0; i < 7; i++) { var dd = new Date(); dd.setDate(dd.getDate() - i); weekMin += minsByDay[keyOf(dd)] || 0; }
+
+    var sum = $("perfSummary"); sum.innerHTML = "";
+    function stat(num, unit, label) {
+      var el = document.createElement("div"); el.className = "perf-stat";
+      el.innerHTML = '<div class="ps-num">' + num + (unit ? '<span class="ps-unit">' + unit + '</span>' : '') +
+        '</div><div class="ps-label">' + label + '</div>';
+      sum.appendChild(el);
+    }
+    stat(totalMins >= 60 ? (totalMins / 60).toFixed(totalMins >= 600 ? 0 : 1) : totalMins, totalMins >= 60 ? "h" : "m", "Focus time");
+    stat(totalSessions, "", "Sessions");
+    stat(totalTasks, "", "Tasks done");
+    stat(weekMin, "m", "This week");
+    stat(bestMin, "m", "Best day");
+
+    // heatmap (last 18 weeks)
+    var weeks = 18;
+    var hm = $("heatmap"); hm.innerHTML = "";
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var monOffset = (today.getDay() + 6) % 7; // Monday = 0
+    var firstMon = new Date(today); firstMon.setDate(today.getDate() - monOffset - (weeks - 1) * 7);
+    for (var w = 0; w < weeks; w++) {
+      var col = document.createElement("div"); col.className = "hm-col";
+      for (var r = 0; r < 7; r++) {
+        var d = new Date(firstMon); d.setDate(firstMon.getDate() + w * 7 + r);
+        var cell = document.createElement("div");
+        if (d > today) { cell.className = "hm-cell future"; col.appendChild(cell); continue; }
+        var k = keyOf(d), sc = score(k);
+        cell.className = "hm-cell lvl" + level(sc);
+        var ss = sessByDay[k] || 0, mm = minsByDay[k] || 0, tk = state.stats.dates[k] || 0;
+        cell.title = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) +
+          " — " + ss + " session" + (ss === 1 ? "" : "s") + (mm ? " (" + mm + "m)" : "") +
+          ", " + tk + " task" + (tk === 1 ? "" : "s") + " done";
+        col.appendChild(cell);
+      }
+      hm.appendChild(col);
+    }
+
+    // time-of-day bars (all-time sessions)
+    var buckets = [["🌅 Morning", 0], ["☀️ Afternoon", 0], ["🌙 Evening", 0], ["🌌 Night", 0]];
+    state.sessions.forEach(function (s) {
+      var h = new Date(s.ts).getHours();
+      var idx = (h >= 5 && h < 12) ? 0 : (h >= 12 && h < 17) ? 1 : (h >= 17 && h < 22) ? 2 : 3;
+      buckets[idx][1]++;
+    });
+    var maxB = Math.max(1, buckets[0][1], buckets[1][1], buckets[2][1], buckets[3][1]);
+    var tod = $("todBars"); tod.innerHTML = "";
+    buckets.forEach(function (b) {
+      var row = document.createElement("div"); row.className = "tod-row";
+      row.innerHTML = '<span class="tod-label">' + b[0] + '</span>' +
+        '<span class="tod-track"><span class="tod-fill" style="width:' + (b[1] / maxB * 100) + '%"></span></span>' +
+        '<span class="tod-val">' + b[1] + ' session' + (b[1] === 1 ? "" : "s") + '</span>';
+      tod.appendChild(row);
+    });
   }
 
   // ---- Focus log rendering ----
@@ -1521,6 +1675,7 @@
 
   // Select / bulk-tag controls
   $("selectToggle").addEventListener("click", toggleSelectMode);
+  $("sortPri").addEventListener("click", sortDumpByPriority);
   $("bulkClearBtn").addEventListener("click", function () { selected = {}; render(); });
   $("bulkDoneBtn").addEventListener("click", exitSelectMode);
   $("bulkTagBtn").addEventListener("click", function (e) {
