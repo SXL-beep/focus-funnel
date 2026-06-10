@@ -74,6 +74,14 @@ sound. Built for personal daily use.
   and switches back to Focus mode (not auto-started).
 - **Light / dark theme** toggle.
 
+## Layout (desktop, 2-column grid)
+
+Row order in `.wrap`: **Timer strip** (full-width slim horizontal bar: clock · task · controls ·
+mode pills · sound), then **Brain Dump | Today**, **Notepad | Done**, **Performance | Focus Log**,
+**Trash** (full-width). Left column = capture, right column = execution/results. Cards pair via
+plain grid auto-placement (only `.timer-card`/`.trash-card` span `1 / -1`). Mobile (<820px)
+stacks to one column.
+
 ## Code map (within `index.html`)
 
 - `<style>` — all CSS; theming via CSS custom properties on `[data-theme]`. Design system is

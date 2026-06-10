@@ -290,7 +290,7 @@
   .funnel-drop.over { border-color: var(--accent); background: rgba(108,140,255,.08); }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 8px; }
 
-  .done-card { grid-column: 1 / -1; }
+  .done-card { }
   .clear-done { font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: underline; }
   .clear-done:hover { color: var(--accent-2); }
   li.done-item { border-left: 3px solid var(--good); }
@@ -298,7 +298,7 @@
   li.done-item .when { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
 
   /* Focus log */
-  .log-card { grid-column: 1 / -1; }
+  .log-card { }
   .log-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .log-summary .ls-pill {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
@@ -313,7 +313,7 @@
   li.log-item .log-mins { font-size: 11.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
   li.log-item .log-task { flex: 1 1 auto; min-width: 100px; color: var(--muted); font-size: 13.5px; }
   /* Notepad */
-  .notes-card { grid-column: 1 / -1; }
+  .notes-card { }
   .notes-grid { display: flex; flex-wrap: wrap; gap: 10px; }
   .note {
     display: flex; align-items: flex-start; gap: 8px;
@@ -336,7 +336,7 @@
   li.trash-item:hover { opacity: 1; }
 
   /* Performance dashboard */
-  .perf-card { grid-column: 1 / -1; }
+  .perf-card { }
   .perf-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
   .perf-stat {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
@@ -364,27 +364,31 @@
   .tod-row .tod-fill { height: 100%; background: var(--accent); border-radius: 999px; min-width: 2px; }
   .tod-row .tod-val { width: 70px; text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; flex-shrink: 0; }
 
-  .timer-card { grid-column: 1 / -1; text-align: center; }
-  .timer-top { color: var(--muted); font-size: 13px; margin-bottom: 3px; min-height: 16px; }
-  .timer-task { font-size: 17px; font-weight: 600; margin: 2px 0 8px; min-height: 22px; }
+  /* Timer strip — slim horizontal bar pinned at the top of the grid */
+  .timer-card {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+  .t-clock-wrap { flex-shrink: 0; }
   .clock {
-    font-size: 52px; font-weight: 700; font-variant-numeric: tabular-nums;
-    letter-spacing: 2px; margin: 2px 0 4px;
+    font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 1px; line-height: 1;
   }
   .clock.break { color: var(--good); }
-  .timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+  .t-info { flex: 1 1 170px; min-width: 150px; text-align: left; }
+  .timer-top { color: var(--muted); font-size: 11.5px; min-height: 0; }
+  .timer-task { font-size: 14.5px; font-weight: 600; min-height: 0; overflow-wrap: anywhere; }
+  .timer-controls { display: flex; gap: 8px; flex-wrap: wrap; }
   .mode-pills {
-    display: inline-flex; gap: 6px; margin-bottom: 10px; background: var(--panel-2);
+    display: inline-flex; gap: 4px; background: var(--panel-2);
     padding: 4px; border-radius: 999px; border: 1px solid var(--line);
   }
   .mode-pills button { background: transparent; color: var(--muted); padding: 6px 14px; font-size: 13px; border-radius: 999px; font-weight: 600; }
   .mode-pills button.active { background: var(--accent); color: white; }
   .mode-pills button.active.break { background: var(--good); }
 
-  .sound-row {
-    display: flex; gap: 16px; justify-content: center; align-items: center;
-    flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
-  }
+  .sound-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .sound-field { display: inline-flex; align-items: center; gap: 8px; }
   .sound-lbl { color: var(--muted); font-size: 12.5px; font-weight: 600; min-width: 14px; }
   #volPct { min-width: 34px; text-align: right; }
@@ -427,6 +431,43 @@
 <div class="filter-bar" id="filterBar" hidden></div>
 
 <div class="wrap">
+  <!-- Timer strip -->
+  <section class="card timer-card">
+    <div class="t-clock-wrap">
+      <div class="clock" id="clock">25:00</div>
+    </div>
+    <div class="t-info">
+      <div class="timer-top" id="timerTop">Working on</div>
+      <div class="timer-task" id="timerTask">— add a task to Today —</div>
+    </div>
+    <div class="timer-controls">
+      <button id="startBtn">Start</button>
+      <button class="ghost" id="resetBtn">Reset</button>
+      <button class="ghost" id="doneBtn">✓ Finish top task</button>
+    </div>
+    <div class="mode-pills">
+      <button data-mode="focus" class="active" id="pillfocus">Focus 25</button>
+      <button data-mode="short" id="pillshort">Break 5</button>
+      <button data-mode="long" id="pilllong">Long 15</button>
+    </div>
+    <div class="sound-row">
+      <button class="ghost" id="soundToggle">🔊 Focus sound</button>
+      <label class="sound-field">
+        <select id="soundType">
+          <option value="brown">🟤 Brown noise</option>
+          <option value="rain">🌧️ Rain</option>
+          <option value="ocean">🌊 Ocean waves</option>
+          <option value="ticks">🕰️ Ticking clock</option>
+        </select>
+      </label>
+      <label class="sound-field volume">
+        <span class="sound-lbl">🔈</span>
+        <input type="range" id="volume" min="0" max="100" step="1" />
+        <span class="sound-lbl" id="volPct">50%</span>
+      </label>
+    </div>
+  </section>
+
   <!-- Brain dump -->
   <section class="card">
     <h2>Brain Dump <span class="h2-right"><button class="sort-pri" id="sortPri" title="Sort by priority (P1 first)">⇅ Priority</button><button class="select-toggle" id="selectToggle">☑ Select</button> <span class="count" id="dumpCount">0</span></span></h2>
@@ -461,38 +502,12 @@
     <div class="empty" id="notesEmpty">Nothing jotted yet — this is your scratch space.</div>
   </section>
 
-  <!-- Timer -->
-  <section class="card timer-card">
-    <div class="mode-pills">
-      <button data-mode="focus" class="active" id="pillfocus">Focus 25</button>
-      <button data-mode="short" id="pillshort">Break 5</button>
-      <button data-mode="long" id="pilllong">Long 15</button>
-    </div>
-    <div class="timer-top" id="timerTop">Working on</div>
-    <div class="timer-task" id="timerTask">— add a task to Today —</div>
-    <div class="clock" id="clock">25:00</div>
-    <div class="timer-controls">
-      <button id="startBtn">Start</button>
-      <button class="ghost" id="resetBtn">Reset</button>
-      <button class="ghost" id="doneBtn">✓ Finish top task</button>
-      <button class="ghost" id="soundToggle">🔊 Focus sound</button>
-    </div>
-    <div class="sound-row">
-      <label class="sound-field">
-        <span class="sound-lbl">Ambience</span>
-        <select id="soundType">
-          <option value="brown">🟤 Brown noise</option>
-          <option value="rain">🌧️ Rain</option>
-          <option value="ocean">🌊 Ocean waves</option>
-          <option value="ticks">🕰️ Ticking clock</option>
-        </select>
-      </label>
-      <label class="sound-field volume">
-        <span class="sound-lbl">🔈</span>
-        <input type="range" id="volume" min="0" max="100" step="1" />
-        <span class="sound-lbl" id="volPct">50%</span>
-      </label>
-    </div>
+  <!-- Done / completed -->
+  <section class="card done-card">
+    <h2>Done <span class="count" id="doneCount">0</span></h2>
+    <p class="hint">Tasks you finished land here, newest first. Hit <b>↩ Restore</b> if you finished one by mistake. · <span class="clear-done" id="clearDone" title="Remove all finished tasks">clear finished</span></p>
+    <ul class="list" id="doneList"></ul>
+    <div class="empty" id="doneEmpty">Nothing finished yet — run the timer and hit “✓ Finish top task”.</div>
   </section>
 
   <!-- Performance dashboard -->
@@ -508,14 +523,6 @@
       <div class="perf-grid-title">When you focus</div>
       <div id="todBars"></div>
     </div>
-  </section>
-
-  <!-- Done / completed -->
-  <section class="card done-card">
-    <h2>Done <span class="count" id="doneCount">0</span></h2>
-    <p class="hint">Tasks you finished land here, newest first. Hit <b>↩ Restore</b> if you finished one by mistake. · <span class="clear-done" id="clearDone" title="Remove all finished tasks">clear finished</span></p>
-    <ul class="list" id="doneList"></ul>
-    <div class="empty" id="doneEmpty">Nothing finished yet — run the timer and hit “✓ Finish top task”.</div>
   </section>
 
   <!-- Focus session log -->
