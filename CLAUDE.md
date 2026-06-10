@@ -56,6 +56,11 @@ sound. Built for personal daily use.
   (`state.sessions: [{ts, mins, task}]`). Stats show "⏱ N sessions today"; a Focus Log card
   lists every session newest-first grouped by day (time-of-day + duration + task), with a
   today summary (count, focus minutes, morning/afternoon/evening split). "clear log" empties it.
+- **Trash** — deleting a task (× on dump/today rows, or × on a Done item) moves it to
+  `state.trash` with `deletedAt`/`from`, shown in a 🗑 Trash card at the bottom. ↩ Restore
+  returns it to its origin (dump or Done); × there deletes forever; "empty trash" wipes all.
+  Entries auto-purge after 30 days (filtered in `fromObject`). Bulk "clear" actions
+  (clear finished / clear all data) remain permanent and bypass the trash.
 - **Done list** — finishing the top task archives it to `state.done` (newest first) instead
   of deleting it; each item can be **↩ Restored** (un-finishes, returns to Brain Dump,
   decrements the completion credit for its `doneDate`) or removed (keeps the credit).

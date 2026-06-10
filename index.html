@@ -330,6 +330,11 @@
   .note .x { background: transparent; border: none; color: var(--muted); padding: 0 4px; font-size: 15px; }
   .note .x:hover { color: var(--accent-2); }
 
+  /* Trash */
+  .trash-card { grid-column: 1 / -1; }
+  li.trash-item { border-left: 3px solid var(--line); opacity: .82; }
+  li.trash-item:hover { opacity: 1; }
+
   /* Performance dashboard */
   .perf-card { grid-column: 1 / -1; }
   .perf-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
@@ -521,6 +526,14 @@
     <ul class="list" id="logList"></ul>
     <div class="empty" id="logEmpty">No focus sessions yet — run a <b>Focus 25</b> all the way to the alarm.</div>
   </section>
+
+  <!-- Trash -->
+  <section class="card trash-card">
+    <h2>🗑 Trash <span class="count" id="trashCount">0</span></h2>
+    <p class="hint">Deleted tasks rest here for 30 days. <b>↩ Restore</b> brings one back; <b>×</b> removes it forever. · <span class="clear-done" id="emptyTrash" title="Permanently delete everything in the trash">empty trash</span></p>
+    <ul class="list" id="trashList"></ul>
+    <div class="empty" id="trashEmpty">Trash is empty — deleted tasks will appear here.</div>
+  </section>
 </div>
 
 <footer>
@@ -554,7 +567,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], sessions: [], notes: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
+    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -569,6 +582,18 @@
     if (Array.isArray(p.notes)) s.notes = p.notes.map(function (n) {
       return { id: (n && n.id) || uid(), text: String((n && n.text) || "") };
     }).filter(function (n) { return n.text; });
+    if (Array.isArray(p.trash)) {
+      var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // auto-purge after 30 days
+      s.trash = p.trash.filter(function (t) {
+        return t && (typeof t.deletedAt !== "number" || t.deletedAt > cutoff);
+      }).map(function (t) {
+        var n = normalizeTask(t);
+        n.deletedAt = (typeof t.deletedAt === "number") ? t.deletedAt : Date.now();
+        n.from = (t.from === "done") ? "done" : "dump";
+        if (t.doneDate) n.doneDate = t.doneDate;
+        return n;
+      });
+    }
     if (Array.isArray(p.sessions)) s.sessions = p.sessions.filter(function (x) {
       return x && typeof x.ts === "number";
     }).map(function (x) {
@@ -744,7 +769,14 @@
     save(); render();
   }
 
-  function deleteTask(id) { removeFromAll(id); save(); render(); }
+  function deleteTask(id) {
+    var t = removeFromAll(id);
+    if (!t) return;
+    t.deletedAt = Date.now();
+    t.from = "dump";
+    state.trash.unshift(t);          // recoverable for 30 days
+    save(); render();
+  }
 
   function toggleDone(id) {
     var t = findTask(id);
@@ -1290,6 +1322,7 @@
     renderStats();
     renderNotes();
     renderLog();
+    renderTrash();
     renderPerf();
     updateTimerTask();
   }
@@ -1723,13 +1756,74 @@
   }
   function deleteDone(id) {           // remove from the archive but KEEP the completion credit
     var i = indexById(state.done, id);
-    if (i >= 0) { state.done.splice(i, 1); save(); render(); }
+    if (i < 0) return;
+    var t = state.done.splice(i, 1)[0];
+    t.deletedAt = Date.now();
+    t.from = "done";
+    state.trash.unshift(t);
+    save(); render();
   }
   function clearDoneList() {
     if (!state.done.length) return;
     if (!confirm("Remove all finished tasks from the Done list? (Your streak/count stays.)")) return;
     state.done = [];
     save(); render();
+  }
+
+  // ---- Trash (deleted tasks, recoverable for 30 days) ----
+  function restoreTrash(id) {
+    var i = indexById(state.trash, id);
+    if (i < 0) return;
+    var t = state.trash.splice(i, 1)[0];
+    var dest = t.from === "done" ? state.done : state.dump;
+    delete t.deletedAt; delete t.from;
+    dest.push(t);
+    save(); render();
+  }
+  function deleteForever(id) {
+    var i = indexById(state.trash, id);
+    if (i >= 0) { state.trash.splice(i, 1); save(); render(); }
+  }
+  function emptyTrash() {
+    if (!state.trash.length) return;
+    if (!confirm("Permanently delete all " + state.trash.length + " task(s) in the trash? This cannot be undone.")) return;
+    state.trash = [];
+    save(); render();
+  }
+  function renderTrash() {
+    var listEl = $("trashList");
+    listEl.innerHTML = "";
+    $("trashCount").textContent = state.trash.length;
+    $("trashEmpty").style.display = state.trash.length ? "none" : "block";
+    state.trash.forEach(function (t) {
+      var li = document.createElement("li");
+      li.className = "task trash-item";
+      var row = document.createElement("div"); row.className = "row"; row.style.cursor = "default";
+      var label = document.createElement("span");
+      label.className = "label done";
+      label.textContent = t.text;
+      row.appendChild(label);
+      var ctrl = document.createElement("span"); ctrl.className = "ctrl";
+      var when = document.createElement("span");
+      when.className = "when";
+      var d = new Date(t.deletedAt || Date.now());
+      when.textContent = (t.from === "done" ? "from Done · " : "") + "deleted " +
+        (keyOf(d) === todayKey() ? "today" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+      ctrl.appendChild(when);
+      var restore = document.createElement("button");
+      restore.className = "mini";
+      restore.textContent = "↩ Restore";
+      restore.title = t.from === "done" ? "Put back into the Done list" : "Put back into the Brain Dump";
+      restore.addEventListener("click", function () { restoreTrash(t.id); });
+      ctrl.appendChild(restore);
+      var x = document.createElement("button");
+      x.className = "x"; x.textContent = "×"; x.title = "Delete forever";
+      x.addEventListener("click", function () { deleteForever(t.id); });
+      ctrl.appendChild(x);
+      row.appendChild(ctrl);
+      li.appendChild(row);
+      listEl.appendChild(li);
+    });
   }
 
   // ---- Theme ----
@@ -1799,10 +1893,11 @@
 
   $("clearAll").addEventListener("click", function () {
     if (!confirm("Clear all tasks and reset the timer? (Your streak history stays.)")) return;
-    state.dump = []; state.today = []; state.done = []; state.mode = "focus";
+    state.dump = []; state.today = []; state.done = []; state.trash = []; state.mode = "focus";
     save(); setMode("focus"); render();
   });
   $("clearDone").addEventListener("click", clearDoneList);
+  $("emptyTrash").addEventListener("click", emptyTrash);
   $("clearLog").addEventListener("click", function () {
     if (!state.sessions.length) return;
     if (!confirm("Clear the focus log? This removes the session history (and its contribution to your streak).")) return;
