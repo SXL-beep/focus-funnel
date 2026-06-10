@@ -58,7 +58,12 @@ sound. Built for personal daily use.
   decrements the completion credit for its `doneDate`) or removed (keeps the credit).
 - **Ambient focus sound** while the timer runs — selectable: brown noise / rain / ocean /
   ticking clock — plus a volume slider. All synthesized live via WebAudio (no asset files).
-- **Alarm** (two-tone WebAudio) when a session ends.
+- **Alarm** (two-tone WebAudio) when a focus session ends; a brighter ascending chime
+  (`breakOverChime`) when a break ends.
+- **Pomodoro flow:** when a focus session completes, the Break 5 countdown auto-starts
+  (~2s after the alarm; any manual click cancels via `clearAutoStart`). Breaks play a soft
+  ticking countdown regardless of the chosen focus ambience; when the break ends it chimes
+  and switches back to Focus mode (not auto-started).
 - **Light / dark theme** toggle.
 
 ## Code map (within `index.html`)

@@ -1423,12 +1423,14 @@
   }
   function startTimer() {
     if (timer.running) return;
+    clearAutoStart();
     if (timer.remaining <= 0) timer.remaining = MODES[state.mode];
     timer.running = true; $("startBtn").textContent = "Pause";
     timer.intervalId = setInterval(tick, 1000);
     startFocusSound();
   }
   function pauseTimer() {
+    clearAutoStart();
     timer.running = false; $("startBtn").textContent = "Start";
     if (timer.intervalId) clearInterval(timer.intervalId);
     timer.intervalId = null;
@@ -1438,15 +1440,28 @@
   function toggleTimer() { timer.running ? pauseTimer() : startTimer(); }
   function resetTimer() { stopTimer(); timer.remaining = MODES[state.mode]; paint(); }
 
+  var autoStart = null;
+  function clearAutoStart() { if (autoStart) { clearTimeout(autoStart); autoStart = null; } }
+
   function finishTimer() {
     pauseTimer();
-    alarm();
     if (state.mode === "focus") {
+      alarm();
       var top = topTask();
       recordSession(Math.round(MODES.focus / 60), top ? top.text : "");
       save(); render();   // log it + refresh stats/log
+      flashBanner("Focus done! Break starting… ☕");
+      // Auto-start the break once the alarm has finished sounding.
+      autoStart = setTimeout(function () {
+        autoStart = null;
+        setMode("short");
+        startTimer();
+      }, 2200);
+    } else {
+      breakOverChime();
+      setMode("focus");   // ready for the next focus block (start it when you are)
+      flashBanner("Break over — back to it 💪");
     }
-    flashBanner(state.mode === "focus" ? "Focus session done! Take a break ☕" : "Break over — back to it 💪");
   }
   function flashBanner(msg) { $("timerTop").textContent = msg; setTimeout(updateTimerTask, 4000); }
 
@@ -1530,7 +1545,8 @@
     var master = ctx.createGain();
     master.gain.value = 0.0001;
     master.connect(ctx.destination);
-    var build = BUILDERS[state.soundType] || BUILDERS.brown;
+    // Breaks get a soft ticking countdown, distinct from the focus ambience.
+    var build = BUILDERS[state.mode === "focus" ? state.soundType : "ticks"] || BUILDERS.brown;
     audio.nodes = build(ctx, master);
     audio.master = master;
     audio.playing = true;
@@ -1559,7 +1575,26 @@
     if (audio.playing) { stopFocusSound(); setTimeout(startFocusSound, 60); }
   }
 
-  // Insistent two-tone alarm when a session ends.
+  // Bright ascending "back to work" chime when a break ends (played twice).
+  function breakOverChime() {
+    var ctx = getCtx();
+    if (!ctx) return;
+    var notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
+    for (var pass = 0; pass < 2; pass++) {
+      notes.forEach(function (f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "triangle"; o.frequency.value = f;
+        o.connect(g); g.connect(ctx.destination);
+        var t0 = ctx.currentTime + pass * 0.85 + i * 0.16;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.28, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+        o.start(t0); o.stop(t0 + 0.32);
+      });
+    }
+  }
+
+  // Insistent two-tone alarm when a focus session ends.
   function alarm() {
     var ctx = getCtx();
     if (!ctx) return;
