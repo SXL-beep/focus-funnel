@@ -364,22 +364,36 @@
   .tod-row .tod-fill { height: 100%; background: var(--accent); border-radius: 999px; min-width: 2px; }
   .tod-row .tod-val { width: 70px; text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; flex-shrink: 0; }
 
-  /* Timer strip — slim horizontal bar pinned at the top of the grid */
+  /* Timer hero — center stage at the top of the grid */
   .timer-card {
     grid-column: 1 / -1;
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-    padding: 12px 18px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 20px 18px 16px; text-align: center;
   }
-  .t-clock-wrap { flex-shrink: 0; }
+  .t-info { min-width: 0; }
+  .timer-top { color: var(--muted); font-size: 12.5px; min-height: 0; }
+  .timer-task { font-size: 17px; font-weight: 600; min-height: 0; overflow-wrap: anywhere; }
   .clock {
-    font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: 1px; line-height: 1;
+    font-size: 76px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 3px; line-height: 1.05;
+    transition: font-size .35s ease;
   }
   .clock.break { color: var(--good); }
-  .t-info { flex: 1 1 170px; min-width: 150px; text-align: left; }
-  .timer-top { color: var(--muted); font-size: 11.5px; min-height: 0; }
-  .timer-task { font-size: 14.5px; font-weight: 600; min-height: 0; overflow-wrap: anywhere; }
-  .timer-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .t-secondary {
+    display: flex; gap: 16px; align-items: center; justify-content: center;
+    flex-wrap: wrap; margin-top: 12px;
+  }
+  @media (max-width: 600px) { .clock { font-size: 54px; } }
+
+  /* Zen mode — while the timer runs, the clock grows and the rest fades back */
+  header, footer, .card { transition: opacity .4s ease; }
+  body.zen header, body.zen footer,
+  body.zen .card:not(.timer-card) { opacity: .35; }
+  body.zen .card:not(.timer-card):hover { opacity: 1; }
+  body.zen .clock { font-size: 104px; }
+  body.zen .t-secondary { opacity: .65; }
+  @media (max-width: 600px) { body.zen .clock { font-size: 68px; } }
   .mode-pills {
     display: inline-flex; gap: 4px; background: var(--panel-2);
     padding: 4px; border-radius: 999px; border: 1px solid var(--line);
@@ -431,20 +445,19 @@
 <div class="filter-bar" id="filterBar" hidden></div>
 
 <div class="wrap">
-  <!-- Timer strip -->
+  <!-- Timer hero -->
   <section class="card timer-card">
-    <div class="t-clock-wrap">
-      <div class="clock" id="clock">25:00</div>
-    </div>
     <div class="t-info">
       <div class="timer-top" id="timerTop">Working on</div>
       <div class="timer-task" id="timerTask">— add a task to Today —</div>
     </div>
+    <div class="clock" id="clock">25:00</div>
     <div class="timer-controls">
       <button id="startBtn">Start</button>
       <button class="ghost" id="resetBtn">Reset</button>
       <button class="ghost" id="doneBtn">✓ Finish top task</button>
     </div>
+    <div class="t-secondary">
     <div class="mode-pills">
       <button data-mode="focus" class="active" id="pillfocus">Focus 25</button>
       <button data-mode="short" id="pillshort">Break 5</button>
@@ -465,6 +478,7 @@
         <input type="range" id="volume" min="0" max="100" step="1" />
         <span class="sound-lbl" id="volPct">50%</span>
       </label>
+    </div>
     </div>
   </section>
 
@@ -1558,6 +1572,7 @@
     timer.running = true; $("startBtn").textContent = "Pause";
     timer.intervalId = setInterval(tick, 1000);
     startFocusSound();
+    document.body.classList.add("zen");
   }
   function pauseTimer() {
     clearAutoStart();
@@ -1565,6 +1580,7 @@
     if (timer.intervalId) clearInterval(timer.intervalId);
     timer.intervalId = null;
     stopFocusSound();
+    document.body.classList.remove("zen");
   }
   function stopTimer() { pauseTimer(); }
   function toggleTimer() { timer.running ? pauseTimer() : startTimer(); }
