@@ -68,7 +68,8 @@ sound. Built for personal daily use.
   decrements the completion credit for its `doneDate`) or removed (keeps the credit).
 - **Ambient sound** while the timer runs, all synthesized live via WebAudio (no asset files),
   shared volume slider + 🔊 mute. Two separate selectors: **Focus** (`state.soundType`) —
-  brown / pink / rain / ocean / stream / wind / campfire / ticks; **Break** (`state.breakSound`) —
+  brown / pink / rain / ocean / stream / wind / campfire / ticks + 4 tick variants
+  (ticksoft / tickwood / tickdeep / tickwatch, all from the `makeTicker(opts)` factory); **Break** (`state.breakSound`) —
   ticks / chimes / ocean / rain / silent. `BUILDERS` map keys each sound; `startFocusSound`
   picks `soundType` in focus mode, `breakSound` otherwise. The single `audio.tickTimer` slot is
   reused by timer-driven builders (ticks/fire/chime).

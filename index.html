@@ -485,13 +485,21 @@
           <option value="stream">🏞️ Stream</option>
           <option value="wind">🍃 Wind</option>
           <option value="fire">🔥 Campfire</option>
-          <option value="ticks">🕰️ Ticking clock</option>
+          <option value="ticks">🕰️ Tick — classic</option>
+          <option value="ticksoft">🕰️ Tick — soft</option>
+          <option value="tickwood">🪵 Tick — wood block</option>
+          <option value="tickdeep">🕰️ Tick — grandfather</option>
+          <option value="tickwatch">⌚ Tick — pocket watch</option>
         </select>
       </label>
       <label class="sound-field">
         <span class="sound-lbl">Break</span>
         <select id="breakSound">
-          <option value="ticks">🕰️ Ticking clock</option>
+          <option value="ticks">🕰️ Tick — classic</option>
+          <option value="ticksoft">🕰️ Tick — soft</option>
+          <option value="tickwood">🪵 Tick — wood block</option>
+          <option value="tickdeep">🕰️ Tick — grandfather</option>
+          <option value="tickwatch">⌚ Tick — pocket watch</option>
           <option value="chime">🔔 Soft chimes</option>
           <option value="ocean">🌊 Ocean waves</option>
           <option value="rain">🌧️ Rain</option>
@@ -1684,6 +1692,52 @@
     return buffer;
   }
 
+  // Factory for ticking-clock variants: tonal "tick" (optionally low-passed) plus an
+  // optional woody noise knock, alternating high/low once per `interval` ms.
+  function makeTicker(opts) {
+    return function (ctx, master) {
+      var woodBuf = null;
+      if (opts.wood) {
+        var wl = Math.floor(0.05 * ctx.sampleRate);
+        woodBuf = ctx.createBuffer(1, wl, ctx.sampleRate);
+        var wd = woodBuf.getChannelData(0);
+        for (var k = 0; k < wl; k++) wd[k] = Math.random() * 2 - 1;
+      }
+      function tick(high) {
+        if (opts.peak > 0) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = opts.type || "sine";
+          o.frequency.value = high ? opts.hi : opts.lo;
+          if (opts.lp) {
+            var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = opts.lp;
+            o.connect(lp); lp.connect(g);
+          } else { o.connect(g); }
+          g.connect(master);
+          var t0 = ctx.currentTime;
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(opts.peak, t0 + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + opts.decay);
+          o.start(t0); o.stop(t0 + opts.decay + 0.03);
+        }
+        if (opts.wood) {
+          var n = ctx.createBufferSource(); n.buffer = woodBuf;
+          var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = high ? 2200 : 1750; bp.Q.value = 1.3;
+          var ng = ctx.createGain();
+          n.connect(bp); bp.connect(ng); ng.connect(master);
+          var tn = ctx.currentTime;
+          ng.gain.setValueAtTime(0.0001, tn);
+          ng.gain.exponentialRampToValueAtTime(opts.wood, tn + 0.003);
+          ng.gain.exponentialRampToValueAtTime(0.0001, tn + 0.03);
+          n.start(tn); n.stop(tn + 0.06);
+        }
+      }
+      var i = 0;
+      tick(true);
+      audio.tickTimer = setInterval(function () { i++; tick(i % 2 === 0); }, opts.interval || 1000);
+      return [];
+    };
+  }
+
   // Each builder wires its graph into `master` and returns the nodes to stop later.
   var BUILDERS = {
     brown: function (ctx, master) {
@@ -1807,7 +1861,12 @@
       audio.tickTimer = setInterval(bell, 4000);
       return [];
     },
-    silent: function () { return []; }
+    silent: function () { return []; },
+    // ticking-clock variants (softer / warmer alternatives to the classic tick)
+    ticksoft: makeTicker({ type: "sine", hi: 660, lo: 540, peak: 0.30, decay: 0.05, lp: 1300 }),
+    tickwood: makeTicker({ type: "sine", hi: 300, lo: 250, peak: 0.12, decay: 0.05, wood: 0.30 }),
+    tickdeep: makeTicker({ type: "sine", hi: 190, lo: 150, peak: 0.36, decay: 0.13, lp: 420 }),
+    tickwatch: makeTicker({ type: "triangle", hi: 2700, lo: 2300, peak: 0.15, decay: 0.02 })
   };
 
   function startFocusSound() {
