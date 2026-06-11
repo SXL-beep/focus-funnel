@@ -66,8 +66,12 @@ sound. Built for personal daily use.
 - **Done list** — finishing the top task archives it to `state.done` (newest first) instead
   of deleting it; each item can be **↩ Restored** (un-finishes, returns to Brain Dump,
   decrements the completion credit for its `doneDate`) or removed (keeps the credit).
-- **Ambient focus sound** while the timer runs — selectable: brown noise / rain / ocean /
-  ticking clock — plus a volume slider. All synthesized live via WebAudio (no asset files).
+- **Ambient sound** while the timer runs, all synthesized live via WebAudio (no asset files),
+  shared volume slider + 🔊 mute. Two separate selectors: **Focus** (`state.soundType`) —
+  brown / pink / rain / ocean / stream / wind / campfire / ticks; **Break** (`state.breakSound`) —
+  ticks / chimes / ocean / rain / silent. `BUILDERS` map keys each sound; `startFocusSound`
+  picks `soundType` in focus mode, `breakSound` otherwise. The single `audio.tickTimer` slot is
+  reused by timer-driven builders (ticks/fire/chime).
 - **Alarm** (two-tone WebAudio) when a focus session ends; a brighter ascending chime
   (`breakOverChime`) when a break ends.
 - **Pomodoro flow:** when a focus session completes, the Break 5 countdown auto-starts

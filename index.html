@@ -474,13 +474,28 @@
       <button data-mode="long" id="pilllong">Long 15</button>
     </div>
     <div class="sound-row">
-      <button class="ghost" id="soundToggle">🔊 Focus sound</button>
+      <button class="ghost" id="soundToggle">🔊 Sound</button>
       <label class="sound-field">
+        <span class="sound-lbl">Focus</span>
         <select id="soundType">
           <option value="brown">🟤 Brown noise</option>
+          <option value="pink">🌸 Pink noise</option>
           <option value="rain">🌧️ Rain</option>
           <option value="ocean">🌊 Ocean waves</option>
+          <option value="stream">🏞️ Stream</option>
+          <option value="wind">🍃 Wind</option>
+          <option value="fire">🔥 Campfire</option>
           <option value="ticks">🕰️ Ticking clock</option>
+        </select>
+      </label>
+      <label class="sound-field">
+        <span class="sound-lbl">Break</span>
+        <select id="breakSound">
+          <option value="ticks">🕰️ Ticking clock</option>
+          <option value="chime">🔔 Soft chimes</option>
+          <option value="ocean">🌊 Ocean waves</option>
+          <option value="rain">🌧️ Rain</option>
+          <option value="silent">🔕 Silent</option>
         </select>
       </label>
       <label class="sound-field volume">
@@ -598,7 +613,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", volume: 0.5, stats: { dates: {} } };
+    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, stats: { dates: {} } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -634,6 +649,7 @@
     if (p.theme) s.theme = p.theme;
     if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
     if (p.soundType) s.soundType = p.soundType;
+    if (p.breakSound) s.breakSound = p.breakSound;
     if (typeof p.volume === "number") s.volume = Math.min(1, Math.max(0, p.volume));
     if (p.stats && p.stats.dates) s.stats.dates = p.stats.dates;
     return s;
@@ -1651,6 +1667,22 @@
     }
     return buffer;
   }
+  // Pink noise (1/f) — softer/warmer than white. Paul Kellet approximation.
+  function pinkBuffer(ctx) {
+    var len = 2 * ctx.sampleRate;
+    var buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (var i = 0; i < len; i++) {
+      var w = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759;
+      b2 = 0.96900 * b2 + w * 0.1538520; b3 = 0.86650 * b3 + w * 0.3104856;
+      b4 = 0.55000 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.0168980;
+      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+      b6 = w * 0.115926;
+    }
+    return buffer;
+  }
 
   // Each builder wires its graph into `master` and returns the nodes to stop later.
   var BUILDERS = {
@@ -1699,7 +1731,83 @@
       tick(true);
       audio.tickTimer = setInterval(function () { i++; tick(i % 2 === 0); }, 1000);
       return [];
-    }
+    },
+    pink: function (ctx, master) {
+      var src = ctx.createBufferSource(); src.buffer = pinkBuffer(ctx); src.loop = true;
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 5200;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.13;
+      src.connect(lp); lp.connect(lvl); lvl.connect(master); src.start();
+      return [src];
+    },
+    stream: function (ctx, master) {
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, false); src.loop = true;
+      var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 700;
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 4500;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.09;
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 2.4; // bubbling shimmer
+      var lfoGain = ctx.createGain(); lfoGain.gain.value = 0.045;
+      lfo.connect(lfoGain); lfoGain.connect(lvl.gain);
+      src.connect(hp); hp.connect(lp); lp.connect(lvl); lvl.connect(master);
+      src.start(); lfo.start();
+      return [src, lfo];
+    },
+    wind: function (ctx, master) {
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, false); src.loop = true;
+      var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 520; bp.Q.value = 0.7;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.16;
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 0.08; // gusts sweep the filter
+      var lfoGain = ctx.createGain(); lfoGain.gain.value = 360;
+      lfo.connect(lfoGain); lfoGain.connect(bp.frequency);
+      var lfo2 = ctx.createOscillator(); lfo2.frequency.value = 0.05;
+      var lfo2g = ctx.createGain(); lfo2g.gain.value = 0.05;
+      lfo2.connect(lfo2g); lfo2g.connect(lvl.gain);
+      src.connect(bp); bp.connect(lvl); lvl.connect(master);
+      src.start(); lfo.start(); lfo2.start();
+      return [src, lfo, lfo2];
+    },
+    fire: function (ctx, master) {
+      // low rumble bed
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, true); src.loop = true;
+      var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 240;
+      var lvl = ctx.createGain(); lvl.gain.value = 0.09;
+      src.connect(lp); lp.connect(lvl); lvl.connect(master); src.start();
+      // short shared white buffer for crackles (cheap to re-trigger)
+      var clen = Math.floor(0.2 * ctx.sampleRate);
+      var cbuf = ctx.createBuffer(1, clen, ctx.sampleRate), cd = cbuf.getChannelData(0);
+      for (var k = 0; k < clen; k++) cd[k] = Math.random() * 2 - 1;
+      function crackle() {
+        if (Math.random() > 0.45) return;
+        var n = ctx.createBufferSource(); n.buffer = cbuf;
+        var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1500 + Math.random() * 2500;
+        var g = ctx.createGain();
+        n.connect(hp); hp.connect(g); g.connect(master);
+        var t0 = ctx.currentTime, amp = 0.05 + Math.random() * 0.18;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(amp, t0 + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04 + Math.random() * 0.05);
+        n.start(t0); n.stop(t0 + 0.14);
+      }
+      audio.tickTimer = setInterval(crackle, 110);
+      return [src];
+    },
+    chime: function (ctx, master) { // gentle bell pulse — calming break sound
+      function bell() {
+        [880, 1320].forEach(function (f, idx) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = "sine"; o.frequency.value = f;
+          o.connect(g); g.connect(master);
+          var t0 = ctx.currentTime;
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(idx ? 0.05 : 0.11, t0 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.6);
+          o.start(t0); o.stop(t0 + 1.7);
+        });
+      }
+      bell();
+      audio.tickTimer = setInterval(bell, 4000);
+      return [];
+    },
+    silent: function () { return []; }
   };
 
   function startFocusSound() {
@@ -1709,8 +1817,9 @@
     var master = ctx.createGain();
     master.gain.value = 0.0001;
     master.connect(ctx.destination);
-    // Breaks get a soft ticking countdown, distinct from the focus ambience.
-    var build = BUILDERS[state.mode === "focus" ? state.soundType : "ticks"] || BUILDERS.brown;
+    // Focus and break each use their own chosen sound.
+    var key = state.mode === "focus" ? state.soundType : state.breakSound;
+    var build = BUILDERS[key] || BUILDERS.brown;
     audio.nodes = build(ctx, master);
     audio.master = master;
     audio.playing = true;
@@ -1892,13 +2001,19 @@
   }
   function applySoundControls() {
     $("soundType").value = state.soundType;
+    $("breakSound").value = state.breakSound;
     $("volume").value = Math.round(state.volume * 100);
     $("volPct").textContent = Math.round(state.volume * 100) + "%";
   }
   function changeSoundType() {
     state.soundType = $("soundType").value;
     save();
-    restartIfPlaying();
+    if (state.mode === "focus") restartIfPlaying();
+  }
+  function changeBreakSound() {
+    state.breakSound = $("breakSound").value;
+    save();
+    if (state.mode !== "focus") restartIfPlaying();
   }
   function changeVolume() {
     state.volume = Math.min(1, Math.max(0, parseInt($("volume").value, 10) / 100));
@@ -1926,6 +2041,7 @@
   $("themeToggle").addEventListener("click", toggleTheme);
   $("soundToggle").addEventListener("click", toggleSound);
   $("soundType").addEventListener("change", changeSoundType);
+  $("breakSound").addEventListener("change", changeBreakSound);
   $("volume").addEventListener("input", changeVolume);
 
   $("pillfocus").addEventListener("click", function () { setMode("focus"); });
