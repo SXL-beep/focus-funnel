@@ -90,8 +90,12 @@ execution/results. Cards pair via plain grid auto-placement (only `.timer-card`/
 span `1 / -1`). Mobile (<820px) stacks to one column.
 
 **Zen mode:** while the timer runs, `body.zen` is set (added in `startTimer`, removed in
-`pauseTimer`): the clock grows to 104px and header/footer/other cards fade to 35% opacity
-(hover restores a card to full opacity so lists stay usable mid-session).
+`pauseTimer`): the clock grows to 150px and header/footer/other cards fade to 35% opacity
+(hover restores a card to full opacity so lists stay usable mid-session). The clock is 100px
+at rest with a gradient text fill (text→accent; break mode uses good→text).
+
+**"✓ Finish top task" does NOT stop the timer** — it archives the task and re-renders; the
+next top task takes over the running countdown. (It used to reset; users hated that.)
 
 ## Code map (within `index.html`)
 

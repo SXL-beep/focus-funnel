@@ -384,26 +384,33 @@
   .timer-top { color: var(--muted); font-size: 12.5px; min-height: 0; }
   .timer-task { font-size: 17px; font-weight: 600; min-height: 0; overflow-wrap: anywhere; }
   .clock {
-    font-size: 76px; font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: 3px; line-height: 1.05;
+    font-size: 100px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; line-height: 1.02;
+    color: var(--text); /* fallback if background-clip unsupported */
+    background: linear-gradient(180deg, var(--text) 25%, var(--accent) 135%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
     transition: font-size .35s ease;
   }
-  .clock.break { color: var(--good); }
+  .clock.break {
+    background: linear-gradient(180deg, var(--good) 35%, var(--text) 160%);
+    -webkit-background-clip: text; background-clip: text;
+  }
   .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
   .t-secondary {
     display: flex; gap: 16px; align-items: center; justify-content: center;
     flex-wrap: wrap; margin-top: 12px;
   }
-  @media (max-width: 600px) { .clock { font-size: 54px; } }
+  @media (max-width: 600px) { .clock { font-size: 62px; } }
 
   /* Zen mode — while the timer runs, the clock grows and the rest fades back */
   header, footer, .card { transition: opacity .4s ease; }
   body.zen header, body.zen footer,
   body.zen .card:not(.timer-card) { opacity: .35; }
   body.zen .card:not(.timer-card):hover { opacity: 1; }
-  body.zen .clock { font-size: 104px; }
+  body.zen .clock { font-size: 150px; letter-spacing: 4px; }
   body.zen .t-secondary { opacity: .65; }
-  @media (max-width: 600px) { body.zen .clock { font-size: 68px; } }
+  @media (max-width: 600px) { body.zen .clock { font-size: 80px; } }
   .mode-pills {
     display: inline-flex; gap: 4px; background: var(--panel-2);
     padding: 4px; border-radius: 999px; border: 1px solid var(--line);
@@ -416,11 +423,18 @@
   .sound-field { display: inline-flex; align-items: center; gap: 8px; }
   .sound-lbl { color: var(--muted); font-size: 12.5px; font-weight: 600; min-width: 14px; }
   #volPct { min-width: 34px; text-align: right; }
-  select#soundType {
+  .sound-row select {
+    -webkit-appearance: none; appearance: none;
     background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-    border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 13px; cursor: pointer; outline: none;
+    border-radius: 9px; padding: 8px 26px 8px 10px; font: inherit; font-size: 13px;
+    cursor: pointer; outline: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 55%, calc(100% - 10px) 55%;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
   }
-  select#soundType:focus { border-color: var(--accent); }
+  .sound-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   input[type="range"]#volume {
     -webkit-appearance: none; appearance: none; width: 150px; height: 5px;
     background: var(--line); border-radius: 999px; outline: none; cursor: pointer;
@@ -1950,8 +1964,8 @@
     t.done = true;
     t.doneDate = todayKey();
     state.done.unshift(t);            // newest first, kept so you can see/restore it
-    save(); render(); resetTimer();
-    if (state.mode !== "focus") setMode("focus");
+    // Timer keeps running — render() updates the strip to the next top task.
+    save(); render();
   }
   function restoreDone(id) {
     var i = indexById(state.done, id);
