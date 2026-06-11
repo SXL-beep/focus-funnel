@@ -43,7 +43,9 @@ sound. Built for personal daily use.
   pill to open a **tag picker** popover: all existing tags shown as selectable chips (click to
   add/remove), plus an input to create a new one. Tags render as deterministically-colored chips;
   clicking a chip filters Brain Dump, Today, and Done to that tag (filter bar with clear button).
-  `state.*[].tags: string[]`. Rename a task by double-clicking its title (no pencil button).
+  `state.*[].tags: string[]`. Each task row has a **done checkbox** (`.task-check`, after the
+  drag grip) that toggles `done` in place (strikethrough, counts toward streak/done-today);
+  the title is no longer click-to-complete. Rename a task by double-clicking its title.
   Delete a tag everywhere via the × on its picker chip. **Bulk-tag mode:** the ☑ Select toggle
   (Brain Dump header) turns Brain Dump + Today rows into checkboxes; a fixed bottom bar shows
   "N selected" + 🏷 Tag (opens the picker in `pickerMode="bulk"`, applying tags to all selected),

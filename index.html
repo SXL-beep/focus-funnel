@@ -240,6 +240,16 @@
   }
   li.task.sel .sel-check { background: var(--accent); border-color: var(--accent); }
 
+  /* Per-task done checkbox */
+  .task-check {
+    width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--line);
+    background: transparent; cursor: pointer; flex-shrink: 0; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; font-weight: 800; line-height: 1;
+  }
+  .task-check:hover { border-color: var(--good); }
+  .task-check.on { background: var(--good); border-color: var(--good); }
+
   .bulk-bar {
     position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60;
     display: flex; align-items: center; gap: 10px;
@@ -1163,6 +1173,14 @@
 
     var grip = document.createElement("span"); grip.className = "grip"; grip.textContent = "⠿"; row.appendChild(grip);
 
+    var check = document.createElement("button");
+    check.className = "task-check" + (t.done ? " on" : "");
+    check.textContent = t.done ? "✓" : "";
+    check.title = t.done ? "Mark as not done" : "Mark as done";
+    check.setAttribute("aria-label", check.title);
+    check.addEventListener("click", function (e) { e.stopPropagation(); toggleDone(t.id); });
+    row.appendChild(check);
+
     // expand / subtask count
     var subDone = t.subtasks.filter(function (s) { return s.done; }).length;
     var exp = document.createElement("button");
@@ -1182,8 +1200,8 @@
     var label = document.createElement("span");
     label.className = "label" + (t.done ? " done" : "");
     label.textContent = t.text;
-    label.title = "Click to mark done / undone · double-click to rename";
-    label.addEventListener("click", function (e) { e.stopPropagation(); toggleDone(t.id); });
+    label.title = "Double-click to rename";
+    label.style.cursor = "text";
     label.addEventListener("dblclick", function (e) { e.stopPropagation(); editText(t.id); });
     row.appendChild(label);
 
