@@ -323,7 +323,8 @@
   li.log-item .log-mins { font-size: 11.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
   li.log-item .log-task { flex: 1 1 auto; min-width: 100px; color: var(--muted); font-size: 13.5px; }
   /* Notepad */
-  .notes-card { }
+  .notes-card { transition: border-color .15s ease, background .15s ease; }
+  .notes-card.drop-over { border-color: var(--accent); background: var(--accent-soft); }
   .notes-grid { display: flex; flex-wrap: wrap; gap: 10px; }
   .note {
     display: flex; align-items: flex-start; gap: 8px;
@@ -552,7 +553,7 @@
   </section>
 
   <!-- Notepad -->
-  <section class="card notes-card">
+  <section class="card notes-card" id="notesCard">
     <h2>Notepad <span class="count" id="noteCount">0</span></h2>
     <p class="hint">Jot quick thoughts here first. Send the keepers to your to-do list with <b>→ To-do</b> (#tags carry over). Double-click a note to edit it.</p>
     <div class="add-row">
@@ -795,6 +796,19 @@
     if (!parsed.text) return;
     state.dump.push({ id: uid(), text: parsed.text, done: false, est: null, tags: parsed.tags, expanded: false, subtasks: [] });
     state.notes.splice(i, 1);
+    save(); render();
+  }
+  // Reverse of noteToTask: demote a task back to a scratch note.
+  // Tags are folded back in as inline #tags; sub-tasks become a trailing list.
+  function taskToNote(id) {
+    var t = removeFromAll(id);
+    if (!t) return;
+    var text = t.text;
+    if (t.tags && t.tags.length) text += " " + t.tags.map(function (tg) { return "#" + tg; }).join(" ");
+    if (t.subtasks && t.subtasks.length) {
+      text += " — " + t.subtasks.map(function (s) { return s.text; }).join("; ");
+    }
+    state.notes.push({ id: uid(), text: text });
     save(); render();
   }
   function renderNotes() {
@@ -1264,6 +1278,15 @@
     est.addEventListener("click", function (e) { e.stopPropagation(); editEst(t.id); });
     ctrl.appendChild(est);
 
+    if (!isInToday) {
+      var toNote = document.createElement("button");
+      toNote.className = "tag-edit";
+      toNote.textContent = "📝";
+      toNote.title = "Move back to Notepad (becomes a scratch note)";
+      toNote.addEventListener("click", function (e) { e.stopPropagation(); taskToNote(t.id); });
+      ctrl.appendChild(toNote);
+    }
+
     var move = document.createElement("button");
     move.className = "mini";
     move.textContent = isInToday ? "← Back" : "Today →";
@@ -1584,6 +1607,23 @@
   }
   wireDropZone(todayDrop, todayEl, "today");
   wireDropZone(dumpEl, dumpEl, "dump");
+
+  // Drag a task onto the Notepad card to demote it back to a scratch note.
+  var notesCard = $("notesCard");
+  notesCard.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    notesCard.classList.add("drop-over");
+  });
+  notesCard.addEventListener("dragleave", function (e) {
+    if (!notesCard.contains(e.relatedTarget)) notesCard.classList.remove("drop-over");
+  });
+  notesCard.addEventListener("drop", function (e) {
+    e.preventDefault();
+    notesCard.classList.remove("drop-over");
+    var id = e.dataTransfer.getData("text/plain");
+    if (id && findTask(id)) taskToNote(id);
+  });
 
   // ---- Timer ----
   function fmt(s) {
