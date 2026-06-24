@@ -143,6 +143,10 @@
 
   .task .row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: grab; flex-wrap: wrap; }
   .task .ctrl { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+  /* Hover-reveal actions — rows stay one line at rest; buttons appear on hover */
+  .task .hover-action { display: none; }
+  .task:hover .hover-action, .task .row:focus-within .hover-action { display: inline-flex; }
+  @media (hover: none) { .task .hover-action { display: inline-flex; } }
   .task .row:active { cursor: grabbing; }
   .task .grip { color: var(--muted); font-size: 15px; line-height: 1; user-select: none; }
   .task .expand {
@@ -1297,14 +1301,15 @@
     appendTagChips(ctrl, t);
 
     var tagBtn = document.createElement("button");
-    tagBtn.className = "tag-edit";
+    tagBtn.className = "tag-edit hover-action";
     tagBtn.textContent = "🏷";
     tagBtn.title = "Add / pick tags";
     tagBtn.addEventListener("click", function (e) { e.stopPropagation(); openTagPicker(t.id, tagBtn); });
     ctrl.appendChild(tagBtn);
 
     var est = document.createElement("button");
-    est.className = "est" + (t.est ? " set" : "");
+    // a set estimate stays visible (it's info); an empty +est hides until hover
+    est.className = "est" + (t.est ? " set" : " hover-action");
     est.textContent = t.est ? t.est + "m" : "+est";
     est.title = "Set time estimate";
     est.addEventListener("click", function (e) { e.stopPropagation(); editEst(t.id); });
@@ -1312,7 +1317,7 @@
 
     if (!isInToday) {
       var toNote = document.createElement("button");
-      toNote.className = "tag-edit";
+      toNote.className = "tag-edit hover-action";
       toNote.textContent = "📝";
       toNote.title = "Move back to Notepad (becomes a scratch note)";
       toNote.addEventListener("click", function (e) { e.stopPropagation(); taskToNote(t.id); });
@@ -1320,7 +1325,7 @@
     }
 
     var move = document.createElement("button");
-    move.className = "mini";
+    move.className = "mini hover-action";
     move.textContent = isInToday ? "← Back" : "Today →";
     move.addEventListener("click", function (e) {
       e.stopPropagation();
@@ -1329,7 +1334,7 @@
     ctrl.appendChild(move);
 
     var x = document.createElement("button");
-    x.className = "x"; x.textContent = "×"; x.title = "Delete";
+    x.className = "x hover-action"; x.textContent = "×"; x.title = "Delete";
     x.addEventListener("click", function (e) { e.stopPropagation(); deleteTask(t.id); });
     ctrl.appendChild(x);
 

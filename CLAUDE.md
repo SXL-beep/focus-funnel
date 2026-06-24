@@ -93,6 +93,10 @@ execution/results. Cards pair via plain grid auto-placement (only `.timer-card`/
 span `1 / -1`). Mobile (<820px) stacks to one column.
 
 Grid is capped at `max-width: 1180px` (centered) so task cards aren't full-bleed.
+**Compact task rows:** Brain Dump/Today rows stay one line at rest — action buttons (🏷, 📝,
+move, ×, and empty +est) carry class `.hover-action` (hidden via CSS until `.task:hover` or
+focus-within); always shown on touch via `@media (hover: none)`. Status bits (checkbox,
+priority, title, tags, set estimate, subtask count) remain visible.
 **Collapsible cards:** Done and Focus Log have `.collapsible` + a chevron in their `h2[data-collapse]`;
 clicking the header toggles `.collapsed` (CSS hides all non-`h2` children). State persists in
 `state.collapsed` ({done,log}); `applyCollapsed()` runs at boot. Easy to extend to other cards via `COLLAPSE_CARDS`.
