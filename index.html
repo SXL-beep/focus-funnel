@@ -192,6 +192,18 @@
   .pri-btn.p2 { background: rgba(245,158,11,.14); color: #d97706; border: 1px solid rgba(245,158,11,.55); }
   .pri-btn.p3 { background: rgba(59,130,246,.12); color: #3b82f6; border: 1px solid rgba(59,130,246,.55); }
   [data-theme="dark"] .pri-btn.p2 { color: #fbbf24; }
+
+  /* Due-date pill */
+  .due-pill {
+    background: transparent; border: 1px dashed var(--line); color: var(--muted);
+    padding: 3px 8px; border-radius: 7px; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  }
+  .due-pill:hover { border-color: var(--accent); color: var(--text); }
+  .due-pill.set { border: 1px solid var(--accent); color: var(--accent); }
+  .due-pill.soon { border: 1px solid rgba(245,158,11,.55); color: #d97706; }
+  .due-pill.today { border: 1px solid rgba(245,158,11,.6); color: #d97706; background: rgba(245,158,11,.12); }
+  .due-pill.overdue { border: 1px solid rgba(239,68,68,.6); color: #ef4444; background: rgba(239,68,68,.12); }
+  [data-theme="dark"] .due-pill.soon, [data-theme="dark"] .due-pill.today { color: #fbbf24; }
   .sort-pri {
     background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
     font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: none;
@@ -649,6 +661,8 @@
   <button class="ghost" id="bulkDoneBtn">Done</button>
 </div>
 
+<input type="date" id="duePicker" style="position:absolute; opacity:0; width:1px; height:1px; border:0; padding:0; pointer-events:none;" />
+
 <script>
 (function () {
   "use strict";
@@ -729,6 +743,7 @@
       done: !!t.done,
       est: (typeof t.est === "number" && t.est > 0) ? t.est : null,
       pri: (t.pri === 1 || t.pri === 2 || t.pri === 3) ? t.pri : null,
+      due: (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) ? t.due : null,
       tags: Array.isArray(t.tags) ? parseTags(t.tags.join(" ")) : [],
       expanded: !!t.expanded,
       trello: (t.trello ? String(t.trello) : null),
@@ -914,6 +929,39 @@
     if (v === "") { t.est = null; }
     else { var n = parseInt(v, 10); if (!isNaN(n) && n > 0) t.est = n; }
     save(); render();
+  }
+
+  // ---- Due dates ----
+  function dueState(t) {
+    if (!t.due || t.done) return "";
+    var tk = todayKey();
+    if (t.due < tk) return "overdue";
+    if (t.due === tk) return "today";
+    // within 2 days = "soon"
+    var d = new Date(); d.setDate(d.getDate() + 2);
+    return t.due <= keyOf(d) ? "soon" : "";
+  }
+  function fmtDue(due) {
+    var tk = todayKey();
+    if (due === tk) return "Today";
+    var y = new Date(); y.setDate(y.getDate() + 1);
+    if (due === keyOf(y)) return "Tmrw";
+    var parts = due.split("-");
+    var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  function editDue(id, anchorEl) {
+    var t = findTask(id);
+    if (!t) return;
+    var inp = $("duePicker");
+    inp.value = t.due || "";
+    inp.dataset.taskId = id;
+    // position invisibly near the pill so the native popup appears in context
+    var r = anchorEl.getBoundingClientRect();
+    inp.style.left = (r.left + window.scrollX) + "px";
+    inp.style.top = (r.bottom + window.scrollY) + "px";
+    if (inp.showPicker) { try { inp.showPicker(); return; } catch (e) {} }
+    inp.focus(); inp.click();
   }
 
   // ---- Priority (none -> P1 -> P2 -> P3 -> none) ----
@@ -1314,6 +1362,14 @@
     est.title = "Set time estimate";
     est.addEventListener("click", function (e) { e.stopPropagation(); editEst(t.id); });
     ctrl.appendChild(est);
+
+    var due = document.createElement("button");
+    var ds = dueState(t);                       // "", "today", "soon", "overdue"
+    due.className = "due-pill" + (t.due ? " set " + ds : " hover-action");
+    due.textContent = t.due ? "📅 " + fmtDue(t.due) : "📅 due";
+    due.title = t.due ? "Due " + t.due + " — click to change" : "Set a due date";
+    due.addEventListener("click", function (e) { e.stopPropagation(); editDue(t.id, due); });
+    ctrl.appendChild(due);
 
     if (!isInToday) {
       var toNote = document.createElement("button");
@@ -2233,6 +2289,10 @@
   // Select / bulk-tag controls
   $("selectToggle").addEventListener("click", toggleSelectMode);
   $("sortPri").addEventListener("click", sortDumpByPriority);
+  $("duePicker").addEventListener("change", function () {
+    var t = findTask(this.dataset.taskId);
+    if (t) { t.due = this.value || null; save(); render(); }
+  });
 
   // Notepad controls
   $("noteAddBtn").addEventListener("click", function () { addNote($("noteInput").value); $("noteInput").value = ""; $("noteInput").focus(); });
