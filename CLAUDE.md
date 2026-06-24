@@ -92,6 +92,11 @@ then mode pills + sound in `.t-secondary`), then **Brain Dump | Today**, **Notep
 execution/results. Cards pair via plain grid auto-placement (only `.timer-card`/`.trash-card`
 span `1 / -1`). Mobile (<820px) stacks to one column.
 
+Grid is capped at `max-width: 1180px` (centered) so task cards aren't full-bleed.
+**Collapsible cards:** Done and Focus Log have `.collapsible` + a chevron in their `h2[data-collapse]`;
+clicking the header toggles `.collapsed` (CSS hides all non-`h2` children). State persists in
+`state.collapsed` ({done,log}); `applyCollapsed()` runs at boot. Easy to extend to other cards via `COLLAPSE_CARDS`.
+
 **Zen mode:** while the timer runs, `body.zen` is set (added in `startTimer`, removed in
 `pauseTimer`): the clock grows to 150px and header/footer/other cards fade to 35% opacity
 (hover restores a card to full opacity so lists stay usable mid-session). The clock is 100px
@@ -122,9 +127,21 @@ next top task takes over the running countdown. (It used to reset; users hated t
 - Bump the `STORAGE_KEY` version and add a migration in `loadState()` when the saved
   data shape changes, so existing users don't lose data.
 
+## Trello sync (Sam's shared board)
+
+- Optional two-way sync with Sam's Trello board "Marlin × Sam — What's Next". Footer has
+  **⤓ Pull from Trello** + **⚙ Trello** (config). Config (`state.trello`: `key`, `token`,
+  `pullListId`, `doneListId`) is entered at runtime and lives ONLY in localStorage —
+  **never hardcode the token; the repo is public on GitHub Pages.** List IDs are pre-filled
+  in `defaults()` (🔥 Now = pull source, ✅ Done = completion target; both non-secret).
+- **Pull:** fetches cards from the Now list and adds any not-yet-imported ones to Brain Dump,
+  stamping each task with its Trello card id (`task.trello`, preserved by `normalizeTask`).
+- **Complete:** `finishTopTask()` calls `trelloMoveToDone(card)` → `PUT /cards/{id}` moving the
+  card to the Done list. Fire-and-forget, non-blocking.
+- Calls go direct from the browser to `api.trello.com` (CORS `allow-origin: *`, works from
+  `file://`). Helpers near the export/import wiring: `trelloPull`, `trelloMoveToDone`, `trelloUrl`.
+
 ## Ideas / backlog (not yet built)
 
-- Export / Import data as JSON (backup + move between browsers/machines).
 - Auto-complete a task when all its sub-tasks are checked.
 - 7-day completion mini-chart.
-- Per-mode sound (silence on breaks).

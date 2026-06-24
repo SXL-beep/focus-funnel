@@ -88,7 +88,7 @@
   .stat.session { color: var(--accent); }
 
   .wrap {
-    max-width: none; margin: 0 auto; padding: 14px 28px 40px;
+    max-width: 1180px; margin: 0 auto; padding: 14px 28px 40px;
     display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
   }
   @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; gap: 14px; padding: 12px 14px 48px; } }
@@ -260,9 +260,20 @@
   .bulk-bar button { padding: 8px 14px; font-size: 13px; border-radius: 999px; }
 
   .filter-bar {
-    max-width: none; margin: 0 auto; padding: 0 28px;
+    max-width: 1180px; margin: 0 auto; padding: 0 28px;
     display: flex; align-items: center; justify-content: center; gap: 10px;
   }
+
+  /* Collapsible sections (Done, Focus Log) */
+  .card.collapsible > h2 { cursor: pointer; user-select: none; }
+  .card.collapsible > h2 .chev {
+    display: inline-block; font-size: 13px; color: var(--accent); margin-right: 7px;
+    transition: transform .18s ease;
+  }
+  .card.collapsible > h2:hover .chev { filter: brightness(1.1); }
+  .card.collapsed > h2 .chev { transform: rotate(-90deg); }
+  .card.collapsed > :not(h2) { display: none; }
+  .card.collapsed { padding-bottom: 16px; }
   .filter-bar .fb-inner {
     background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
     padding: 7px 14px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 10px;
@@ -565,8 +576,8 @@
   </section>
 
   <!-- Done / completed -->
-  <section class="card done-card">
-    <h2>Done <span class="count" id="doneCount">0</span></h2>
+  <section class="card done-card collapsible" id="doneCard">
+    <h2 data-collapse="done"><span class="chev">▾</span>Done <span class="count" id="doneCount">0</span></h2>
     <p class="hint">Tasks you finished land here, newest first. Hit <b>↩ Restore</b> if you finished one by mistake. · <span class="clear-done" id="clearDone" title="Remove all finished tasks">clear finished</span></p>
     <ul class="list" id="doneList"></ul>
     <div class="empty" id="doneEmpty">Nothing finished yet — run the timer and hit “✓ Finish top task”.</div>
@@ -588,8 +599,8 @@
   </section>
 
   <!-- Focus session log -->
-  <section class="card log-card">
-    <h2>Focus Log <span class="count" id="logCount">0</span></h2>
+  <section class="card log-card collapsible" id="logCard">
+    <h2 data-collapse="log"><span class="chev">▾</span>Focus Log <span class="count" id="logCount">0</span></h2>
     <p class="hint">Every completed focus session, newest first. · <span class="clear-done" id="clearLog" title="Clear the focus log">clear log</span></p>
     <div class="log-summary" id="logSummary"></div>
     <ul class="list" id="logList"></ul>
@@ -610,6 +621,19 @@
     <button class="ghost" id="exportBtn">⬇️ Export backup</button>
     <button class="ghost" id="importBtn">⬆️ Import backup</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden />
+  </div>
+  <div class="backup-row" style="margin-top:10px">
+    <button class="ghost" id="trelloPullBtn">⤓ Pull from Trello</button>
+    <button class="ghost" id="trelloSetupBtn">⚙ Trello</button>
+    <span class="hint" id="trelloStatus" style="margin-left:6px"></span>
+  </div>
+  <div id="trelloConfig" hidden style="margin:8px 0;padding:10px;border:1px solid var(--line,#333);border-radius:10px;max-width:520px">
+    <div class="hint" style="margin-bottom:6px">Paste your Trello key &amp; token once — they're stored only in this browser, never in the code. The board's list IDs are pre-filled.</div>
+    <input id="trKey" class="text" type="text" placeholder="Trello API key" autocomplete="off" style="margin-bottom:6px" />
+    <input id="trToken" class="text" type="text" placeholder="Trello token" autocomplete="off" style="margin-bottom:6px" />
+    <input id="trPull" class="text" type="text" placeholder="Pull-from list ID (🔥 Now)" autocomplete="off" style="margin-bottom:6px" />
+    <input id="trDone" class="text" type="text" placeholder="Done list ID (✅ Done)" autocomplete="off" style="margin-bottom:6px" />
+    <button id="trSaveBtn">Save</button>
   </div>
   Everything saves to this browser automatically · <span class="reset-link" id="clearAll">clear all data</span>
 </footer>
@@ -636,7 +660,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, stats: { dates: {} } };
+    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, collapsed: {}, stats: { dates: {} }, trello: { key: "", token: "", pullListId: "6a2cf9eb49369bd1489095fd", doneListId: "6a2cf9ef81e12acfca28dd3e" } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -673,8 +697,15 @@
     if (typeof p.soundOn === "boolean") s.soundOn = p.soundOn;
     if (p.soundType) s.soundType = p.soundType;
     if (p.breakSound) s.breakSound = p.breakSound;
+    if (p.collapsed && typeof p.collapsed === "object") s.collapsed = p.collapsed;
     if (typeof p.volume === "number") s.volume = Math.min(1, Math.max(0, p.volume));
     if (p.stats && p.stats.dates) s.stats.dates = p.stats.dates;
+    if (p.trello && typeof p.trello === "object") {
+      s.trello.key = String(p.trello.key || "");
+      s.trello.token = String(p.trello.token || "");
+      if (p.trello.pullListId) s.trello.pullListId = String(p.trello.pullListId);
+      if (p.trello.doneListId) s.trello.doneListId = String(p.trello.doneListId);
+    }
     return s;
   }
   function loadState() {
@@ -696,6 +727,7 @@
       pri: (t.pri === 1 || t.pri === 2 || t.pri === 3) ? t.pri : null,
       tags: Array.isArray(t.tags) ? parseTags(t.tags.join(" ")) : [],
       expanded: !!t.expanded,
+      trello: (t.trello ? String(t.trello) : null),
       subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
         return { id: s.id || uid(), text: String(s.text || ""), done: !!s.done };
       }) : []
@@ -2004,6 +2036,7 @@
     t.done = true;
     t.doneDate = todayKey();
     state.done.unshift(t);            // newest first, kept so you can see/restore it
+    if (t.trello) trelloMoveToDone(t.trello);  // tick it off on the shared Trello board
     // Timer keeps running — render() updates the strip to the next top task.
     save(); render();
   }
@@ -2089,6 +2122,20 @@
     });
   }
 
+  // ---- Collapsible sections ----
+  var COLLAPSE_CARDS = { done: "doneCard", log: "logCard" };
+  function applyCollapsed() {
+    Object.keys(COLLAPSE_CARDS).forEach(function (key) {
+      var el = $(COLLAPSE_CARDS[key]);
+      if (el) el.classList.toggle("collapsed", !!(state.collapsed && state.collapsed[key]));
+    });
+  }
+  function toggleCollapse(key) {
+    if (!state.collapsed) state.collapsed = {};
+    state.collapsed[key] = !state.collapsed[key];
+    save(); applyCollapsed();
+  }
+
   // ---- Theme ----
   function applyTheme() {
     document.documentElement.setAttribute("data-theme", state.theme);
@@ -2168,6 +2215,9 @@
   });
   $("clearDone").addEventListener("click", clearDoneList);
   $("emptyTrash").addEventListener("click", emptyTrash);
+  Array.prototype.forEach.call(document.querySelectorAll("h2[data-collapse]"), function (h) {
+    h.addEventListener("click", function () { toggleCollapse(h.getAttribute("data-collapse")); });
+  });
   $("clearLog").addEventListener("click", function () {
     if (!state.sessions.length) return;
     if (!confirm("Clear the focus log? This removes the session history (and its contribution to your streak).")) return;
@@ -2229,6 +2279,69 @@
     e.target.value = ""; // allow re-importing the same file later
   });
 
+  // ---- Trello sync ----
+  // Key + token live only in this browser's localStorage (state.trello), never in the code.
+  function setTrelloStatus(msg) { var s = $("trelloStatus"); if (s) s.textContent = msg || ""; }
+  function trelloReady() { return !!(state.trello && state.trello.key && state.trello.token); }
+  function trelloUrl(path, params) {
+    params = params || {};
+    params.key = state.trello.key; params.token = state.trello.token;
+    var q = Object.keys(params).map(function (k) {
+      return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+    }).join("&");
+    return "https://api.trello.com/1" + path + "?" + q;
+  }
+  function existingTrelloIds() {
+    var set = {};
+    state.dump.concat(state.today, state.done).forEach(function (t) { if (t.trello) set[t.trello] = 1; });
+    return set;
+  }
+  function fillTrelloInputs() {
+    $("trKey").value = state.trello.key || "";
+    $("trToken").value = state.trello.token || "";
+    $("trPull").value = state.trello.pullListId || "";
+    $("trDone").value = state.trello.doneListId || "";
+  }
+  function trelloPull() {
+    if (!trelloReady()) {
+      setTrelloStatus("Add your Trello key & token in ⚙ Trello first");
+      $("trelloConfig").hidden = false; fillTrelloInputs(); return;
+    }
+    setTrelloStatus("Pulling…");
+    fetch(trelloUrl("/lists/" + state.trello.pullListId + "/cards", { fields: "name" }))
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (cards) {
+        var have = existingTrelloIds(), added = 0;
+        cards.forEach(function (c) {
+          if (have[c.id]) return;
+          state.dump.push({ id: uid(), text: String(c.name || "").trim(), done: false, est: null, pri: null, tags: [], expanded: false, trello: c.id, subtasks: [] });
+          added++;
+        });
+        if (added) { save(); render(); }
+        setTrelloStatus(added ? ("Pulled " + added + " new task" + (added > 1 ? "s" : "") + " from Trello ✓") : "Already up to date ✓");
+      })
+      .catch(function (e) { setTrelloStatus("Trello pull failed (" + e.message + ") — check your key/token"); });
+  }
+  function trelloMoveToDone(cardId) {
+    if (!trelloReady() || !cardId) return;
+    fetch(trelloUrl("/cards/" + cardId, { idList: state.trello.doneListId, pos: "top" }), { method: "PUT" })
+      .then(function (r) { if (r.ok) setTrelloStatus("Ticked off on Trello ✓"); })
+      .catch(function () { /* non-blocking */ });
+  }
+  window.trelloMoveToDone = trelloMoveToDone; // referenced from finishTopTask
+  $("trelloPullBtn").addEventListener("click", trelloPull);
+  $("trelloSetupBtn").addEventListener("click", function () {
+    var c = $("trelloConfig"); c.hidden = !c.hidden; if (!c.hidden) fillTrelloInputs();
+  });
+  $("trSaveBtn").addEventListener("click", function () {
+    state.trello.key = $("trKey").value.trim();
+    state.trello.token = $("trToken").value.trim();
+    state.trello.pullListId = $("trPull").value.trim() || state.trello.pullListId;
+    state.trello.doneListId = $("trDone").value.trim() || state.trello.doneListId;
+    save(); $("trelloConfig").hidden = true;
+    setTrelloStatus(trelloReady() ? "Saved ✓ — hit ⤓ Pull from Trello" : "Saved, but key/token still missing");
+  });
+
   document.addEventListener("keydown", function (e) {
     var tag = document.activeElement.tagName;
     if (e.code === "Space" && tag !== "INPUT" && tag !== "TEXTAREA") {
@@ -2240,6 +2353,7 @@
   applyTheme();
   applySoundLabel();
   applySoundControls();
+  applyCollapsed();
   setMode(state.mode);
   render();
   paint();
