@@ -92,7 +92,7 @@ then mode pills + sound in `.t-secondary`), then **Brain Dump | Today**, **Notep
 execution/results. Cards pair via plain grid auto-placement (only `.timer-card`/`.trash-card`
 span `1 / -1`). Mobile (<820px) stacks to one column.
 
-Grid is capped at `max-width: 1180px` (centered) so task cards aren't full-bleed.
+Grid is capped at `max-width: 1400px` (centered) so task cards aren't full-bleed.
 **Compact task rows:** Brain Dump/Today rows stay one line at rest — action buttons (🏷, 📝,
 move, ×, and empty +est) carry class `.hover-action` (hidden via CSS until `.task:hover` or
 focus-within); always shown on touch via `@media (hover: none)`. Status bits (checkbox,
