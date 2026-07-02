@@ -82,10 +82,13 @@ sound. Built for personal daily use.
   reused by timer-driven builders (ticks/fire/chime).
 - **Alarm** (two-tone WebAudio) when a focus session ends; a brighter ascending chime
   (`breakOverChime`) when a break ends.
-- **Pomodoro flow:** when a focus session completes, the Break 5 countdown auto-starts
-  (~2s after the alarm; any manual click cancels via `clearAutoStart`). Breaks play a soft
-  ticking countdown regardless of the chosen focus ambience; when the break ends it chimes
-  and switches back to Focus mode (not auto-started).
+- **Pomodoro flow (manual, nagging):** NO auto-start. When any phase's timer hits 0,
+  `finishTimer` logs (focus only), switches to the next mode, and calls `startAlarm()` — a
+  **persistent alarm that re-fires every 4s until dismissed** (5-min / 75-rep safety cap). It
+  rings so you don't forget to start the next phase. `stopAlarm()` clears it and is called by
+  Start, Reset, setMode (mode pills), and the dedicated 🔕 Stop-alarm button (`#stopAlarmBtn`,
+  shown only while ringing). While ringing: `body.ringing`, a pulsing `.ring-banner` message,
+  and the Start button pulses (`.cta`). `breakOverChime` is now unused.
 - **Light / dark theme** toggle.
 
 ## Layout (desktop, 2-column grid)

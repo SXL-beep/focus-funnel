@@ -425,6 +425,13 @@
     -webkit-background-clip: text; background-clip: text;
   }
   .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  /* Ringing (end-of-phase alarm) state */
+  .ring-banner { color: var(--accent-2); font-weight: 800; font-size: 15px; }
+  body.ringing .ring-banner { animation: ringpulse 1s ease-in-out infinite; }
+  @keyframes ringpulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  #stopAlarmBtn { background: var(--accent-2); color: #fff; font-weight: 700; }
+  #startBtn.cta { box-shadow: 0 0 0 4px var(--accent-soft); animation: ctapulse 1.4s ease-in-out infinite; }
+  @keyframes ctapulse { 0%,100% { box-shadow: 0 0 0 4px var(--accent-soft); } 50% { box-shadow: 0 0 0 8px var(--accent-soft); } }
   .t-secondary {
     display: flex; gap: 16px; align-items: center; justify-content: center;
     flex-wrap: wrap; margin-top: 12px;
@@ -508,6 +515,7 @@
       <button id="startBtn">Start</button>
       <button class="ghost" id="resetBtn">Reset</button>
       <button class="ghost" id="doneBtn">✓ Finish top task</button>
+      <button id="stopAlarmBtn" hidden>🔕 Stop alarm</button>
     </div>
     <div class="t-secondary">
     <div class="mode-pills">
@@ -651,6 +659,17 @@
     <input id="trDone" class="text" type="text" placeholder="Done list ID (✅ Done)" autocomplete="off" style="margin-bottom:6px" />
     <button id="trSaveBtn">Save</button>
   </div>
+  <div class="backup-row" style="margin-top:10px">
+    <button class="ghost" id="feishuPullBtn">⤓ Pull from Feishu</button>
+    <button class="ghost" id="feishuSetupBtn">⚙ Feishu</button>
+    <span class="hint" id="feishuStatus" style="margin-left:6px"></span>
+  </div>
+  <div id="feishuConfig" hidden style="margin:8px 0;padding:10px;border:1px solid var(--line,#333);border-radius:10px;max-width:520px">
+    <div class="hint" style="margin-bottom:6px">Paste your bridge URL &amp; password once — stored only in this browser, never in the code. The bridge holds the Feishu key safely on Cloudflare.</div>
+    <input id="fsUrl" class="text" type="text" placeholder="Bridge URL (e.g. https://funnel-feishu.you.workers.dev)" autocomplete="off" style="margin-bottom:6px" />
+    <input id="fsSecret" class="text" type="text" placeholder="Shared password (SHARED_SECRET)" autocomplete="off" style="margin-bottom:6px" />
+    <button id="fsSaveBtn">Save</button>
+  </div>
   Everything saves to this browser automatically · <span class="reset-link" id="clearAll">clear all data</span>
 </footer>
 
@@ -678,7 +697,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, collapsed: {}, stats: { dates: {} }, trello: { key: "", token: "", pullListId: "6a2cf9eb49369bd1489095fd", doneListId: "6a2cf9ef81e12acfca28dd3e" } };
+    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, collapsed: {}, stats: { dates: {} }, trello: { key: "", token: "", pullListId: "6a2cf9eb49369bd1489095fd", doneListId: "6a2cf9ef81e12acfca28dd3e" }, feishu: { url: "", secret: "" } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -724,6 +743,10 @@
       if (p.trello.pullListId) s.trello.pullListId = String(p.trello.pullListId);
       if (p.trello.doneListId) s.trello.doneListId = String(p.trello.doneListId);
     }
+    if (p.feishu && typeof p.feishu === "object") {
+      s.feishu.url = String(p.feishu.url || "");
+      s.feishu.secret = String(p.feishu.secret || "");
+    }
     return s;
   }
   function loadState() {
@@ -747,6 +770,7 @@
       tags: Array.isArray(t.tags) ? parseTags(t.tags.join(" ")) : [],
       expanded: !!t.expanded,
       trello: (t.trello ? String(t.trello) : null),
+      feishu: (t.feishu ? String(t.feishu) : null),
       subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
         return { id: s.id || uid(), text: String(s.text || ""), done: !!s.done };
       }) : []
@@ -1736,6 +1760,7 @@
 
   function setMode(mode) {
     state.mode = mode; save();
+    stopAlarm();
     stopTimer();
     timer.remaining = MODES[mode];
     ["focus", "short", "long"].forEach(function (m) {
@@ -1756,7 +1781,7 @@
   }
   function startTimer() {
     if (timer.running) return;
-    clearAutoStart();
+    stopAlarm();
     if (timer.remaining <= 0) timer.remaining = MODES[state.mode];
     timer.running = true; $("startBtn").textContent = "Pause";
     timer.intervalId = setInterval(tick, 1000);
@@ -1764,7 +1789,6 @@
     document.body.classList.add("zen");
   }
   function pauseTimer() {
-    clearAutoStart();
     timer.running = false; $("startBtn").textContent = "Start";
     if (timer.intervalId) clearInterval(timer.intervalId);
     timer.intervalId = null;
@@ -1773,29 +1797,45 @@
   }
   function stopTimer() { pauseTimer(); }
   function toggleTimer() { timer.running ? pauseTimer() : startTimer(); }
-  function resetTimer() { stopTimer(); timer.remaining = MODES[state.mode]; paint(); }
+  function resetTimer() { stopTimer(); stopAlarm(); timer.remaining = MODES[state.mode]; paint(); }
 
-  var autoStart = null;
-  function clearAutoStart() { if (autoStart) { clearTimeout(autoStart); autoStart = null; } }
+  // ---- Persistent end-of-phase alarm — rings until you press Start or Stop ----
+  var alarmTimer = null;
+  function startAlarm(msg) {
+    stopAlarm();
+    alarm();
+    var count = 1;
+    alarmTimer = setInterval(function () {
+      alarm();
+      if (++count >= 75) stopAlarm();   // ~5 min safety cap (75 × 4s) if you've walked away
+    }, 4000);
+    document.body.classList.add("ringing");
+    var top = $("timerTop");
+    top.textContent = msg;
+    top.classList.add("ring-banner");
+    $("stopAlarmBtn").hidden = false;
+    $("startBtn").classList.add("cta");
+  }
+  function stopAlarm() {
+    if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; }
+    document.body.classList.remove("ringing");
+    var top = $("timerTop"); if (top) top.classList.remove("ring-banner");
+    var sb = $("stopAlarmBtn"); if (sb) sb.hidden = true;
+    var st = $("startBtn"); if (st) st.classList.remove("cta");
+    updateTimerTask();
+  }
 
   function finishTimer() {
     pauseTimer();
     if (state.mode === "focus") {
-      alarm();
       var top = topTask();
       recordSession(Math.round(MODES.focus / 60), top ? top.text : "");
-      save(); render();   // log it + refresh stats/log
-      flashBanner("Focus done! Break starting… ☕");
-      // Auto-start the break once the alarm has finished sounding.
-      autoStart = setTimeout(function () {
-        autoStart = null;
-        setMode("short");
-        startTimer();
-      }, 2200);
+      save(); render();                 // log it + refresh stats/log
+      setMode("short");                 // ready the break — you press Start
+      startAlarm("⏰ Focus done — press Start to begin your break");
     } else {
-      breakOverChime();
-      setMode("focus");   // ready for the next focus block (start it when you are)
-      flashBanner("Break over — back to it 💪");
+      setMode("focus");                 // ready the next focus — you press Start
+      startAlarm("⏰ Break over — press Start for your next focus!");
     }
   }
   function flashBanner(msg) { $("timerTop").textContent = msg; setTimeout(updateTimerTask, 4000); }
@@ -2098,6 +2138,7 @@
     t.doneDate = todayKey();
     state.done.unshift(t);            // newest first, kept so you can see/restore it
     if (t.trello) trelloMoveToDone(t.trello);  // tick it off on the shared Trello board
+    if (t.feishu) feishuMoveToDone(t.feishu);  // tick it off on the Feishu To-Do board
     // Timer keeps running — render() updates the strip to the next top task.
     save(); render();
   }
@@ -2259,6 +2300,7 @@
   $("startBtn").addEventListener("click", toggleTimer);
   $("resetBtn").addEventListener("click", resetTimer);
   $("doneBtn").addEventListener("click", finishTopTask);
+  $("stopAlarmBtn").addEventListener("click", stopAlarm);
   $("themeToggle").addEventListener("click", toggleTheme);
   $("soundToggle").addEventListener("click", toggleSound);
   $("soundType").addEventListener("change", changeSoundType);
@@ -2405,6 +2447,64 @@
     state.trello.doneListId = $("trDone").value.trim() || state.trello.doneListId;
     save(); $("trelloConfig").hidden = true;
     setTrelloStatus(trelloReady() ? "Saved ✓ — hit ⤓ Pull from Trello" : "Saved, but key/token still missing");
+  });
+
+  // ---- Feishu sync (via a tiny Cloudflare "bridge" — Feishu can't be called from the browser directly) ----
+  // Bridge URL + password live only in this browser's localStorage (state.feishu), never in the code.
+  var FS_PRI = { High: 1, Med: 2, Low: 3 };
+  function setFeishuStatus(msg) { var s = $("feishuStatus"); if (s) s.textContent = msg || ""; }
+  function feishuReady() { return !!(state.feishu && state.feishu.url && state.feishu.secret); }
+  function feishuBase() { return String(state.feishu.url || "").replace(/\/+$/, ""); }
+  function existingFeishuIds() {
+    var set = {};
+    state.dump.concat(state.today, state.done).forEach(function (t) { if (t.feishu) set[t.feishu] = 1; });
+    return set;
+  }
+  function fillFeishuInputs() {
+    $("fsUrl").value = state.feishu.url || "";
+    $("fsSecret").value = state.feishu.secret || "";
+  }
+  function feishuPull() {
+    if (!feishuReady()) {
+      setFeishuStatus("Add your bridge URL & password in ⚙ Feishu first");
+      $("feishuConfig").hidden = false; fillFeishuInputs(); return;
+    }
+    setFeishuStatus("Pulling…");
+    fetch(feishuBase() + "/now?secret=" + encodeURIComponent(state.feishu.secret))
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (data) {
+        var tasks = (data && data.tasks) || [];
+        var have = existingFeishuIds(), added = 0;
+        tasks.forEach(function (c) {
+          if (!c.id || have[c.id]) return;
+          state.dump.push({ id: uid(), text: String(c.text || "").trim(), done: false, est: null,
+            pri: (FS_PRI[c.pri] || null), due: (typeof c.due === "string" ? c.due : null),
+            tags: [], expanded: false, feishu: c.id, subtasks: [] });
+          added++;
+        });
+        if (added) { save(); render(); }
+        setFeishuStatus(added ? ("Pulled " + added + " new task" + (added > 1 ? "s" : "") + " from Feishu ✓") : "Already up to date ✓");
+      })
+      .catch(function (e) { setFeishuStatus("Feishu pull failed (" + e.message + ") — check the bridge URL/password"); });
+  }
+  function feishuMoveToDone(recId) {
+    if (!feishuReady() || !recId) return;
+    fetch(feishuBase() + "/done", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: state.feishu.secret, id: recId })
+    }).then(function (r) { if (r.ok) setFeishuStatus("Ticked off on Feishu ✓"); })
+      .catch(function () { /* non-blocking */ });
+  }
+  window.feishuMoveToDone = feishuMoveToDone; // referenced from finishTopTask
+  $("feishuPullBtn").addEventListener("click", feishuPull);
+  $("feishuSetupBtn").addEventListener("click", function () {
+    var c = $("feishuConfig"); c.hidden = !c.hidden; if (!c.hidden) fillFeishuInputs();
+  });
+  $("fsSaveBtn").addEventListener("click", function () {
+    state.feishu.url = $("fsUrl").value.trim();
+    state.feishu.secret = $("fsSecret").value.trim();
+    save(); $("feishuConfig").hidden = true;
+    setFeishuStatus(feishuReady() ? "Saved ✓ — hit ⤓ Pull from Feishu" : "Saved, but URL/password still missing");
   });
 
   document.addEventListener("keydown", function (e) {
