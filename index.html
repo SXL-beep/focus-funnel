@@ -403,27 +403,33 @@
   .tod-row .tod-val { width: 70px; text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; flex-shrink: 0; }
 
   /* Timer hero — center stage at the top of the grid */
+  /* Timer hero — BOLD STATEMENT: vivid gradient panel, giant white clock */
   .timer-card {
     grid-column: 1 / -1;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 20px 18px 16px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 40px 24px 30px; text-align: center; color: #fff; border: none;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
+    box-shadow: 0 16px 40px rgba(99,102,241,.28);
   }
+  [data-theme="dark"] .timer-card {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%);
+    box-shadow: 0 16px 40px rgba(0,0,0,.4);
+  }
+  .timer-card:has(.clock.break) { background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 55%, #10b981 100%); }
   .t-info { min-width: 0; }
-  .timer-top { color: var(--muted); font-size: 12.5px; min-height: 0; }
-  .timer-task { font-size: 17px; font-weight: 600; min-height: 0; overflow-wrap: anywhere; }
+  .timer-top { color: rgba(255,255,255,.82); font-size: 12.5px; font-weight: 600; min-height: 0; }
+  .timer-task {
+    display: inline-block; background: rgba(255,255,255,.18); color: #fff;
+    padding: 6px 16px; border-radius: 999px; font-size: 15px; font-weight: 700;
+    min-height: 0; overflow-wrap: anywhere; margin-top: 2px;
+  }
   .clock {
-    font-size: 100px; font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: 2px; line-height: 1.02;
-    color: var(--text); /* fallback if background-clip unsupported */
-    background: linear-gradient(180deg, var(--text) 25%, var(--accent) 135%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    transition: font-size .35s ease;
+    font-size: 138px; font-weight: 900; font-variant-numeric: tabular-nums;
+    letter-spacing: 1px; line-height: .95; color: #fff;
+    text-shadow: 0 6px 34px rgba(0,0,0,.20);
+    transition: font-size .35s ease; margin-top: 4px;
   }
-  .clock.break {
-    background: linear-gradient(180deg, var(--good) 35%, var(--text) 160%);
-    -webkit-background-clip: text; background-clip: text;
-  }
+  .clock.break { color: #fff; }
   .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
   /* Ringing (end-of-phase alarm) state */
   .ring-banner { color: var(--accent-2); font-weight: 800; font-size: 15px; }
@@ -436,16 +442,16 @@
     display: flex; gap: 16px; align-items: center; justify-content: center;
     flex-wrap: wrap; margin-top: 12px;
   }
-  @media (max-width: 600px) { .clock { font-size: 62px; } }
+  @media (max-width: 600px) { .clock { font-size: 84px; } .timer-card { padding: 28px 16px 22px; } }
 
   /* Zen mode — while the timer runs, the clock grows and the rest fades back */
   header, footer, .card { transition: opacity .4s ease; }
   body.zen header, body.zen footer,
   body.zen .card:not(.timer-card) { opacity: .35; }
   body.zen .card:not(.timer-card):hover { opacity: 1; }
-  body.zen .clock { font-size: 150px; letter-spacing: 4px; }
+  body.zen .clock { font-size: 190px; letter-spacing: 3px; }
   body.zen .t-secondary { opacity: .65; }
-  @media (max-width: 600px) { body.zen .clock { font-size: 80px; } }
+  @media (max-width: 600px) { body.zen .clock { font-size: 100px; } }
   .mode-pills {
     display: inline-flex; gap: 4px; background: var(--panel-2);
     padding: 4px; border-radius: 999px; border: 1px solid var(--line);
@@ -453,6 +459,26 @@
   .mode-pills button { background: transparent; color: var(--muted); padding: 6px 14px; font-size: 13px; border-radius: 999px; font-weight: 600; }
   .mode-pills button.active { background: var(--accent); color: white; }
   .mode-pills button.active.break { background: var(--good); }
+
+  /* Controls restyled for the bold gradient panel */
+  .timer-card #startBtn { background: #fff; color: #6d28d9; font-weight: 800; font-size: 15px; padding: 12px 30px; border-radius: 12px; }
+  .timer-card:has(.clock.break) #startBtn { color: #0f766e; }
+  .timer-card .timer-controls button.ghost {
+    background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.38); font-weight: 600;
+  }
+  .timer-card .timer-controls button.ghost:hover { background: rgba(255,255,255,.28); }
+  .timer-card .ring-banner { color: #ffe08a; }
+  .timer-card .mode-pills { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.25); }
+  .timer-card .mode-pills button { color: rgba(255,255,255,.82); }
+  .timer-card .mode-pills button.active { background: #fff; color: #6d28d9; }
+  .timer-card .mode-pills button.active.break { background: #fff; color: #0f766e; }
+  .timer-card .sound-lbl { color: rgba(255,255,255,.82); }
+  .timer-card #soundToggle { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.38); }
+  .timer-card .sound-row select { background-color: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.35); }
+  .timer-card .sound-row select option { color: #1f2430; }
+  .timer-card input[type="range"]#volume { background: rgba(255,255,255,.35); }
+  .timer-card input[type="range"]#volume::-webkit-slider-thumb { background: #fff; border-color: #6d28d9; }
+  .timer-card input[type="range"]#volume::-moz-range-thumb { background: #fff; border-color: #6d28d9; }
 
   .sound-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .sound-field { display: inline-flex; align-items: center; gap: 8px; }
