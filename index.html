@@ -20,42 +20,45 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Focus Funnel" />
 <style>
-  /* Calm Minimal — dark counterpart */
+  /* Cockpit theme — DARK counterpart (matches Daily Cockpit) */
   :root {
-    --bg: #111319;
-    --app-bg: radial-gradient(1200px 800px at 80% -12%, #1b1f2b 0%, #111319 58%);
-    --panel: #181b24;
-    --panel-2: #20242f;
-    --line: #2a2f3d;
-    --text: #e9ebf2;
-    --muted: #8b90a3;
-    --accent: #818cf8;
-    --accent-soft: rgba(129,140,248,.16);
-    --accent-2: #ff8a6b;
-    --good: #3ecf8e;
-    --shadow: 0 10px 30px rgba(0,0,0,.30);
+    --lime: #c8f000; --lime-deep: #8fb800;
+    --bg: #0f1014;
+    --app-bg: #0f1014;
+    --panel: #15161c;      /* paper / tiles */
+    --panel-2: #1b1d25;    /* inset inputs / chips */
+    --line: #262832;       /* hairline */
+    --text: #f4f5f7;       /* ink */
+    --muted: #7f8494;
+    --sub: #9aa0ad;
+    --accent: #c8f000;     /* lime — readable as text on dark */
+    --accent-soft: rgba(200,240,0,.16);
+    --accent-2: #c8f000;
+    --good: #c8f000;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 16px 46px rgba(0,0,0,.5);
   }
-  /* Calm Minimal — light (primary) */
+  /* Cockpit theme — LIGHT (primary) */
   [data-theme="light"] {
-    --bg: #f6f7f9;
-    --app-bg: radial-gradient(1200px 760px at 78% -16%, #ffffff 0%, #f4f5f9 62%);
-    --panel: #ffffff;
-    --panel-2: #f7f8fb;
-    --line: #ecedf3;
-    --text: #1f2430;
-    --muted: #9197a8;
-    --accent: #6366f1;
-    --accent-soft: rgba(99,102,241,.10);
-    --accent-2: #ff7a59;
-    --good: #16a86f;
-    --shadow: 0 6px 24px rgba(30,40,80,.07);
+    --bg: #e9eaed;
+    --app-bg: #e9eaed;
+    --panel: #ffffff;      /* paper / tiles */
+    --panel-2: #eef0f3;    /* inset inputs */
+    --line: #ececec;       /* hairline */
+    --text: #0b0b0d;       /* ink */
+    --muted: #8b8f99;
+    --sub: #5f636e;
+    --accent: #8fb800;     /* lime-deep — readable lime as text on white */
+    --accent-soft: rgba(200,240,0,.22);
+    --accent-2: #8fb800;
+    --good: #8fb800;
+    --shadow: 0 1px 3px rgba(0,0,0,.05), 0 12px 40px rgba(0,0,0,.06);
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { height: 100%; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
     background: var(--app-bg);
     color: var(--text);
     -webkit-font-smoothing: antialiased;
@@ -120,26 +123,30 @@
   .add-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   input::placeholder { color: var(--muted); }
 
+  /* Primary = black-on-lime (cockpit); ghost = paper + hairline */
   button {
-    font: inherit; cursor: pointer; border: none; border-radius: 10px; padding: 11px 14px;
-    background: var(--accent); color: white; font-weight: 600;
+    font: inherit; cursor: pointer; border: none; border-radius: 10px; padding: 11px 16px;
+    background: var(--text); color: var(--lime); font-weight: 800;
     transition: transform .05s ease, filter .15s ease;
   }
   button:hover { filter: brightness(1.08); }
   button:active { transform: translateY(1px); }
-  button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+  button.ghost:hover { border-color: var(--lime-deep); filter: none; }
   button.ghost.active { border-color: var(--accent); color: var(--accent); }
 
   ul.list { list-style: none; margin: 0; padding: 0; min-height: 24px; }
 
+  /* Flat hairline-divided rows (cockpit tile style) */
   li.task {
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px;
+    background: transparent; border: none; border-top: 1px solid var(--line); border-radius: 0;
     border-left: 3px solid transparent;
-    margin-bottom: 7px; transition: border-color .15s ease, opacity .15s ease, transform .12s ease, box-shadow .15s, background .15s;
+    margin-bottom: 0; transition: opacity .15s ease, background .15s ease;
   }
+  ul.list > li.task:first-child { border-top: none; }
   li.task.dragging { opacity: .35; }
-  li.task.in-today { border-left-color: var(--line); }
-  li.task.is-top { border-left-color: var(--accent); background: var(--accent-soft); }
+  li.task.in-today { }
+  li.task.is-top { border-left-color: var(--lime); background: var(--accent-soft); }
 
   .task .row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: grab; flex-wrap: wrap; }
   .task .ctrl { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
@@ -261,10 +268,10 @@
     width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--line);
     background: transparent; cursor: pointer; flex-shrink: 0; padding: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 12px; font-weight: 800; line-height: 1;
+    color: #0b0b0d; font-size: 12px; font-weight: 800; line-height: 1;
   }
-  .task-check:hover { border-color: var(--good); }
-  .task-check.on { background: var(--good); border-color: var(--good); }
+  .task-check:hover { border-color: var(--lime-deep); }
+  .task-check.on { background: var(--lime); border-color: var(--lime); color: #0b0b0d; }
 
   .bulk-bar {
     position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60;
@@ -402,83 +409,69 @@
   .tod-row .tod-fill { height: 100%; background: var(--accent); border-radius: 999px; min-width: 2px; }
   .tod-row .tod-val { width: 70px; text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; flex-shrink: 0; }
 
-  /* Timer hero — center stage at the top of the grid */
-  /* Timer hero — BOLD STATEMENT: vivid gradient panel, giant white clock */
+  /* Timer hero — COCKPIT lime band, giant black clock (lime in both modes) */
   .timer-card {
     grid-column: 1 / -1;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 40px 24px 30px; text-align: center; color: #fff; border: none;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
-    box-shadow: 0 16px 40px rgba(99,102,241,.28);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 36px 24px 30px; text-align: center; color: #0b0b0d; border: none;
+    background: var(--lime); box-shadow: var(--shadow);
   }
-  [data-theme="dark"] .timer-card {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%);
-    box-shadow: 0 16px 40px rgba(0,0,0,.4);
-  }
-  .timer-card:has(.clock.break) { background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 55%, #10b981 100%); }
   .t-info { min-width: 0; }
-  .timer-top { color: rgba(255,255,255,.82); font-size: 12.5px; font-weight: 600; min-height: 0; }
+  .timer-top { font-size: 11px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: #0b0b0d; opacity: .58; min-height: 0; }
   .timer-task {
-    display: inline-block; background: rgba(255,255,255,.18); color: #fff;
-    padding: 6px 16px; border-radius: 999px; font-size: 15px; font-weight: 700;
-    min-height: 0; overflow-wrap: anywhere; margin-top: 2px;
+    display: inline-block; background: rgba(0,0,0,.10); color: #0b0b0d;
+    padding: 5px 15px; border-radius: 999px; font-size: 15px; font-weight: 700;
+    min-height: 0; overflow-wrap: anywhere; margin-top: 6px;
   }
   .clock {
-    font-size: 138px; font-weight: 900; font-variant-numeric: tabular-nums;
-    letter-spacing: 1px; line-height: .95; color: #fff;
-    text-shadow: 0 6px 34px rgba(0,0,0,.20);
-    transition: font-size .35s ease; margin-top: 4px;
+    font-size: 140px; font-weight: 850; font-variant-numeric: tabular-nums;
+    letter-spacing: -.03em; line-height: .92; color: #0b0b0d;
+    transition: font-size .35s ease; margin-top: 6px;
   }
-  .clock.break { color: #fff; }
-  .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .clock.break { color: #0b0b0d; }
+  .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
   /* Ringing (end-of-phase alarm) state */
-  .ring-banner { color: var(--accent-2); font-weight: 800; font-size: 15px; }
+  .ring-banner { color: #0b0b0d; font-weight: 800; font-size: 15px; }
   body.ringing .ring-banner { animation: ringpulse 1s ease-in-out infinite; }
-  @keyframes ringpulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
-  #stopAlarmBtn { background: var(--accent-2); color: #fff; font-weight: 700; }
-  #startBtn.cta { box-shadow: 0 0 0 4px var(--accent-soft); animation: ctapulse 1.4s ease-in-out infinite; }
-  @keyframes ctapulse { 0%,100% { box-shadow: 0 0 0 4px var(--accent-soft); } 50% { box-shadow: 0 0 0 8px var(--accent-soft); } }
+  @keyframes ringpulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  #stopAlarmBtn { background: #0b0b0d; color: var(--lime); font-weight: 800; }
+  #startBtn.cta { box-shadow: 0 0 0 3px rgba(0,0,0,.18); animation: ctapulse 1.4s ease-in-out infinite; }
+  @keyframes ctapulse { 0%,100% { box-shadow: 0 0 0 3px rgba(0,0,0,.18); } 50% { box-shadow: 0 0 0 7px rgba(0,0,0,.10); } }
   .t-secondary {
     display: flex; gap: 16px; align-items: center; justify-content: center;
-    flex-wrap: wrap; margin-top: 12px;
+    flex-wrap: wrap; margin-top: 14px;
   }
-  @media (max-width: 600px) { .clock { font-size: 84px; } .timer-card { padding: 28px 16px 22px; } }
+  @media (max-width: 600px) { .clock { font-size: 84px; } .timer-card { padding: 26px 16px 22px; } }
 
   /* Zen mode — while the timer runs, the clock grows and the rest fades back */
   header, footer, .card { transition: opacity .4s ease; }
   body.zen header, body.zen footer,
-  body.zen .card:not(.timer-card) { opacity: .35; }
+  body.zen .card:not(.timer-card) { opacity: .32; }
   body.zen .card:not(.timer-card):hover { opacity: 1; }
-  body.zen .clock { font-size: 190px; letter-spacing: 3px; }
-  body.zen .t-secondary { opacity: .65; }
-  @media (max-width: 600px) { body.zen .clock { font-size: 100px; } }
-  .mode-pills {
-    display: inline-flex; gap: 4px; background: var(--panel-2);
-    padding: 4px; border-radius: 999px; border: 1px solid var(--line);
-  }
-  .mode-pills button { background: transparent; color: var(--muted); padding: 6px 14px; font-size: 13px; border-radius: 999px; font-weight: 600; }
-  .mode-pills button.active { background: var(--accent); color: white; }
-  .mode-pills button.active.break { background: var(--good); }
+  body.zen .clock { font-size: 200px; letter-spacing: -.03em; }
+  body.zen .t-secondary { opacity: .7; }
+  @media (max-width: 600px) { body.zen .clock { font-size: 104px; } }
 
-  /* Controls restyled for the bold gradient panel */
-  .timer-card #startBtn { background: #fff; color: #6d28d9; font-weight: 800; font-size: 15px; padding: 12px 30px; border-radius: 12px; }
-  .timer-card:has(.clock.break) #startBtn { color: #0f766e; }
-  .timer-card .timer-controls button.ghost {
-    background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.38); font-weight: 600;
+  /* Session pills + controls on the lime band (black outline / black-on-lime) */
+  .mode-pills {
+    display: inline-flex; gap: 4px; background: transparent;
+    padding: 4px; border-radius: 999px; border: 1.5px solid rgba(0,0,0,.5);
   }
-  .timer-card .timer-controls button.ghost:hover { background: rgba(255,255,255,.28); }
-  .timer-card .ring-banner { color: #ffe08a; }
-  .timer-card .mode-pills { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.25); }
-  .timer-card .mode-pills button { color: rgba(255,255,255,.82); }
-  .timer-card .mode-pills button.active { background: #fff; color: #6d28d9; }
-  .timer-card .mode-pills button.active.break { background: #fff; color: #0f766e; }
-  .timer-card .sound-lbl { color: rgba(255,255,255,.82); }
-  .timer-card #soundToggle { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.38); }
-  .timer-card .sound-row select { background-color: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.35); }
-  .timer-card .sound-row select option { color: #1f2430; }
-  .timer-card input[type="range"]#volume { background: rgba(255,255,255,.35); }
-  .timer-card input[type="range"]#volume::-webkit-slider-thumb { background: #fff; border-color: #6d28d9; }
-  .timer-card input[type="range"]#volume::-moz-range-thumb { background: #fff; border-color: #6d28d9; }
+  .mode-pills button { background: transparent; color: #0b0b0d; padding: 6px 14px; font-size: 13px; border-radius: 999px; font-weight: 700; }
+  .mode-pills button.active { background: #0b0b0d; color: var(--lime); }
+  .mode-pills button.active.break { background: #0b0b0d; color: var(--lime); }
+  .timer-card #startBtn { background: #0b0b0d; color: var(--lime); font-weight: 800; font-size: 15px; padding: 12px 30px; border-radius: 12px; }
+  .timer-card .timer-controls button.ghost {
+    background: transparent; color: #0b0b0d; border: 1.5px solid rgba(0,0,0,.5); font-weight: 700;
+  }
+  .timer-card .timer-controls button.ghost:hover { background: rgba(0,0,0,.08); filter: none; }
+  .timer-card .sound-lbl { color: #0b0b0d; opacity: .72; }
+  .timer-card #soundToggle { background: transparent; color: #0b0b0d; border: 1.5px solid rgba(0,0,0,.5); }
+  .timer-card .sound-row select { background-color: rgba(0,0,0,.08); color: #0b0b0d; border-color: rgba(0,0,0,.4); }
+  .timer-card .sound-row select option { color: #0b0b0d; background: #fff; }
+  .timer-card input[type="range"]#volume { background: rgba(0,0,0,.25); }
+  .timer-card input[type="range"]#volume::-webkit-slider-thumb { background: #0b0b0d; border-color: var(--lime); }
+  .timer-card input[type="range"]#volume::-moz-range-thumb { background: #0b0b0d; border-color: var(--lime); }
 
   .sound-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .sound-field { display: inline-flex; align-items: center; gap: 8px; }
@@ -1261,12 +1254,11 @@
   function matchesFilter(t) { return !activeFilter || (t.tags && t.tags.indexOf(activeFilter) >= 0); }
 
   // Theme-agnostic chip colors (readable on both light and dark panels).
+  // Cockpit theme: tags are neutral outline chips (one-accent discipline).
   function paintChip(el, tag) {
-    var hue = tagHue(tag);
-    var dark = document.documentElement.getAttribute("data-theme") === "dark";
-    el.style.color = dark ? "hsl(" + hue + ",70%,72%)" : "hsl(" + hue + ",55%,40%)";
-    el.style.background = "hsla(" + hue + ",65%,52%," + (dark ? "0.16" : "0.12") + ")";
-    el.style.borderColor = "hsla(" + hue + ",60%,55%,0.5)";
+    el.style.color = "var(--sub, var(--muted))";
+    el.style.background = "transparent";
+    el.style.borderColor = "var(--line)";
   }
   function makeTagChip(tag) {
     var chip = document.createElement("span");

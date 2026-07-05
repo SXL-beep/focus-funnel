@@ -120,10 +120,14 @@ next top task takes over the running countdown. (It used to reset; users hated t
 
 ## Code map (within `index.html`)
 
-- `<style>` — all CSS; theming via CSS custom properties on `[data-theme]`. Design system is
-  "Calm Minimal": soft indigo accent (`--accent`), `--accent-soft` tint for the active/top task
-  and focus rings, light airy palette (light theme is primary) + a calm-dark counterpart.
-  `--accent-2` (warm coral) is reserved for the brand "Funnel" word, matching the app icon.
+- `<style>` — all CSS; theming via CSS custom properties on `[data-theme]`. Design system is the
+  **Cockpit theme** matching Sam's `🏠 Daily Cockpit.html`: soft-grey page (`#e9eaed` / dark `#0f1014`),
+  white paper tiles, hairline dividers (`--line`), near-black ink, ONE lime accent (`--lime #c8f000`,
+  `--lime-deep #8fb800`). `--accent` = the *readable* lime (deep on light, bright on dark) for accent-text;
+  fills use `--lime` with black text. Primary buttons = black-on-lime; ghosts = paper + hairline. Timer
+  is a constant **lime hero band** with a giant black clock. Task rows are **flat hairline rows** (not
+  filled cards). Tags are neutral outline chips (one-accent discipline; `paintChip` no longer hue-colors).
+  Priority P1/P2/P3 keep red/amber/blue as a functional exception. 🌙/☀️ toggle switches to cockpit-dark.
 - `<script>` IIFE:
   - State + persistence: `defaults()`, `loadState()`, `save()`, `normalizeTask()`.
   - Task ops: `addTask`, `moveTask`, `deleteTask`, `toggleDone`, `editEst`, sub-task fns.
