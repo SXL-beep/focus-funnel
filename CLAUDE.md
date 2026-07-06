@@ -52,8 +52,15 @@ sound. Built for personal daily use.
   stored as `pri: 1|2|3|null`. "⇅ Priority" in the Brain Dump header sorts the dump P1-first.
 - **Due dates** per task (`due: "YYYY-MM-DD"|null`) — 📅 pill opens a native date picker
   (hidden `#duePicker` + `showPicker()`); `dueState()` colors it overdue (red) / today / soon
-  (amber); `fmtDue()` shows Today/Tmrw/short date. Part of the Phase-1 reliability roadmap
-  (next: recurring tasks → reminders → auto-backup; then cloud sync, integrations, AI).
+  (amber); `fmtDue()` shows Today/Tmrw/short date. Part of the Phase-1 reliability roadmap.
+- **Auto-backup** — rolling ring of the last 12 timestamped state snapshots in a SEPARATE
+  localStorage key `focus-funnel.backups` (never in `state`, never synced). Snapshots taken once
+  per day on open and right before every destructive action — clear-all, import, and an incoming
+  cloud-sync overwrite (`pushBackup` before `applyRemote`), so a sync clobber is recoverable.
+  Footer **🗄 Backups** panel lists them with per-row Restore (safe `fromObject` path, takes a
+  "before restore" snapshot first) + Download. Quota-safe writes (drop-oldest-and-retry).
+  Roadmap note: recurring tasks + reminders were consciously SKIPPED by Sam (2026-07-06); due
+  dates + auto-backup shipped. Remaining phases: cloud sync ✅, integrations, AI.
 - **Tags** per task — type `#tag` inline when adding (parsed out of the text), or click the 🏷
   pill to open a **tag picker** popover: all existing tags shown as selectable chips (click to
   add/remove), plus an input to create a new one. Tags render as deterministically-colored chips;
