@@ -689,6 +689,17 @@
     <input id="fsSecret" class="text" type="text" placeholder="Shared password (SHARED_SECRET)" autocomplete="off" style="margin-bottom:6px" />
     <button id="fsSaveBtn">Save</button>
   </div>
+  <div class="backup-row" style="margin-top:10px">
+    <button class="ghost" id="syncSetupBtn">☁️ Sync</button>
+    <span class="hint" id="syncDot" style="margin-left:6px">○ Sync off</span>
+  </div>
+  <div id="syncConfig" hidden style="margin:8px 0;padding:10px;border:1px solid var(--line,#333);border-radius:10px;max-width:520px">
+    <div class="hint" style="margin-bottom:6px">Paste your sync Worker URL &amp; key once — stored only in this browser, never in the code or your synced data. Use the SAME URL + key on every device to keep them in sync.</div>
+    <input id="syncUrl" class="text" type="text" placeholder="Worker URL (https://…workers.dev/)" autocomplete="off" style="margin-bottom:6px" />
+    <input id="syncKey" class="text" type="text" placeholder="Sync key (x-sync-key)" autocomplete="off" style="margin-bottom:6px" />
+    <button id="syncSaveBtn">Save</button>
+    <button class="ghost" id="syncDisableBtn" style="margin-left:6px">Turn off</button>
+  </div>
   Everything saves to this browser automatically · <span class="reset-link" id="clearAll">clear all data</span>
 </footer>
 
@@ -720,6 +731,7 @@
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    schedulePush();   // cloud sync: debounced push-on-change (no-op unless sync is configured)
   }
   // Build a clean, validated state from any parsed object (used by load + import).
   function fromObject(p) {
@@ -2467,6 +2479,132 @@
     setTrelloStatus(trelloReady() ? "Saved ✓ — hit ⤓ Pull from Trello" : "Saved, but key/token still missing");
   });
 
+  // ---- Cloud sync (whole-state, last-write-wins by timestamp) ----
+  // Creds live in a SEPARATE localStorage key, never inside `state`, so they are never
+  // overwritten by an incoming synced blob and never pushed to the cloud.
+  var SYNC_CFG_KEY = "focus-funnel.sync";        // { url, key } — device creds
+  var SYNC_META_KEY = "focus-funnel.sync.meta";  // { updatedAt } — timestamp of our current state
+  var syncCfg = loadSyncCfg();
+  var localUpdatedAt = loadSyncMeta();           // 0 if this device has never synced
+  var pushTimer = null, pullTimer = null;
+  var suppressPush = false;                       // guard: applying a remote blob must not re-push
+
+  function loadSyncCfg() {
+    try { var r = localStorage.getItem(SYNC_CFG_KEY); if (r) { var o = JSON.parse(r);
+      return { url: String((o && o.url) || ""), key: String((o && o.key) || "") }; } } catch (e) {}
+    return { url: "", key: "" };
+  }
+  function saveSyncCfg() { try { localStorage.setItem(SYNC_CFG_KEY, JSON.stringify(syncCfg)); } catch (e) {} }
+  function loadSyncMeta() {
+    try { var r = localStorage.getItem(SYNC_META_KEY); if (r) { var o = JSON.parse(r);
+      return (o && typeof o.updatedAt === "number") ? o.updatedAt : 0; } } catch (e) {}
+    return 0;
+  }
+  function saveSyncMeta() { try { localStorage.setItem(SYNC_META_KEY, JSON.stringify({ updatedAt: localUpdatedAt })); } catch (e) {} }
+  function syncReady() { return !!(syncCfg && syncCfg.url && syncCfg.key); }
+  function syncBase() { return String(syncCfg.url || "").replace(/\/+$/, ""); }
+
+  function setSyncStatus(s) {
+    var el = $("syncDot"); if (!el) return;
+    var map = {
+      off:     ["○ Sync off",  "var(--muted, #888)"],
+      synced:  ["● Synced",    "#39b54a"],
+      syncing: ["● Syncing…",  "#e0a400"],
+      offline: ["● Offline",   "#c0392b"]
+    };
+    var m = map[s] || map.off;
+    el.textContent = m[0]; el.style.color = m[1];
+  }
+
+  // Serialize state for the cloud MINUS device-local secrets (Trello token, Feishu password).
+  function syncBlobState() {
+    var raw;
+    try { raw = JSON.parse(JSON.stringify(state)); } catch (e) { raw = {}; }
+    if (raw.trello) { raw.trello.key = ""; raw.trello.token = ""; }
+    if (raw.feishu) { raw.feishu.secret = ""; }
+    return raw;
+  }
+
+  function isEditing() {
+    var el = document.activeElement; if (!el) return false;
+    var t = el.tagName; return t === "INPUT" || t === "TEXTAREA";
+  }
+
+  // Adopt a remote state blob, preserving THIS device's own (unsynced) integration creds.
+  function applyRemote(remoteState) {
+    suppressPush = true;
+    var keepTrello = { key: state.trello.key, token: state.trello.token };
+    var keepFeishu = { url: state.feishu.url, secret: state.feishu.secret };
+    state = fromObject(remoteState);
+    state.trello.key = keepTrello.key; state.trello.token = keepTrello.token;
+    state.feishu.url = keepFeishu.url; state.feishu.secret = keepFeishu.secret;
+    save();  // persist locally; suppressPush stops this from bouncing back to the cloud
+    applyTheme(); applySoundLabel(); applySoundControls(); applyCollapsed();
+    setMode(state.mode); render(); paint();
+    suppressPush = false;
+  }
+
+  function schedulePush() {
+    if (suppressPush || !syncReady()) return;
+    localUpdatedAt = Date.now(); saveSyncMeta();
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushNow, 1500);   // debounce ~1.5s after the last change
+  }
+  function pushNow() {
+    if (!syncReady()) return;
+    setSyncStatus("syncing");
+    fetch(syncBase() + "/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-sync-key": syncCfg.key },
+      body: JSON.stringify({ updatedAt: localUpdatedAt, state: syncBlobState() })
+    }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); setSyncStatus("synced"); })
+      .catch(function () { setSyncStatus("offline"); });
+  }
+  function pullNow(isBoot) {
+    if (!syncReady()) return;
+    // Don't yank the UI out from under a running timer or an active edit — retry next tick.
+    if (!isBoot && (timer.running || isEditing())) return;
+    setSyncStatus("syncing");
+    fetch(syncBase() + "/", { headers: { "x-sync-key": syncCfg.key } })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (blob) {
+        if (!blob || typeof blob !== "object" || !blob.state) {
+          // Remote is empty — seed it with this device's data.
+          localUpdatedAt = Date.now(); saveSyncMeta(); pushNow(); return;
+        }
+        var remoteAt = (typeof blob.updatedAt === "number") ? blob.updatedAt : 0;
+        if (remoteAt > localUpdatedAt) {
+          applyRemote(blob.state);
+          localUpdatedAt = remoteAt; saveSyncMeta();
+        }
+        setSyncStatus("synced");
+      })
+      .catch(function () { setSyncStatus("offline"); });
+  }
+  function startPullLoop() { stopPullLoop(); pullTimer = setInterval(function () { pullNow(false); }, 20000); }
+  function stopPullLoop() { if (pullTimer) { clearInterval(pullTimer); pullTimer = null; } }
+  function startSync() {
+    if (syncReady()) { setSyncStatus("syncing"); pullNow(true); startPullLoop(); }
+    else { setSyncStatus("off"); }
+  }
+
+  function fillSyncInputs() { $("syncUrl").value = syncCfg.url || ""; $("syncKey").value = syncCfg.key || ""; }
+  $("syncSetupBtn").addEventListener("click", function () {
+    var c = $("syncConfig"); c.hidden = !c.hidden; if (!c.hidden) fillSyncInputs();
+  });
+  $("syncSaveBtn").addEventListener("click", function () {
+    syncCfg.url = $("syncUrl").value.trim();
+    syncCfg.key = $("syncKey").value.trim();
+    saveSyncCfg();
+    $("syncConfig").hidden = true;
+    startSync();
+  });
+  $("syncDisableBtn").addEventListener("click", function () {
+    syncCfg = { url: "", key: "" }; saveSyncCfg();
+    stopPullLoop(); if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+    $("syncConfig").hidden = true; setSyncStatus("off");
+  });
+
   // ---- Feishu sync (via a tiny Cloudflare "bridge" — Feishu can't be called from the browser directly) ----
   // Bridge URL + password live only in this browser's localStorage (state.feishu), never in the code.
   var FS_PRI = { High: 1, Med: 2, Low: 3 };
@@ -2540,6 +2678,7 @@
   setMode(state.mode);
   render();
   paint();
+  startSync();   // cloud sync: pull-on-open + start the ~20s periodic pull (no-op unless configured)
 })();
 </script>
 </body>
