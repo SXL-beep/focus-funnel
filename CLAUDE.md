@@ -4,6 +4,13 @@ A single-file, zero-dependency productivity web app. Brain-dump tasks, funnel th
 that matter into "Today," and run the top one on a Pomodoro timer with ambient focus
 sound. Built for personal daily use.
 
+> **▶ RESUME (cross-device sync):** Cloudflare backend is DONE + tested. **Next = wire the app
+> (Phase 2):** a ☁️ Sync panel (paste URL + key, stored under a separate localStorage key, NOT in
+> `state`), pull-on-open + debounced push-on-change + ~20s periodic pull, last-write-wins by
+> timestamp (`{updatedAt,state}` blob), offline cache, status dot. Worker `sync-worker/worker.js`
+> live at `https://focus-funnel-sync.samxiangli.workers.dev/` (header `x-sync-key`). Full details +
+> URL/key/KV-id in the `focus-funnel-cloud-sync` auto-memory.
+
 ## What it is
 
 - **Core app is one file: `index.html`.** All HTML, CSS, and JavaScript inline. No build
