@@ -506,6 +506,143 @@
   .reset-link { color: var(--muted); text-decoration: underline; cursor: pointer; }
   .backup-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 12px; }
   .backup-row button { padding: 8px 13px; font-size: 12.5px; }
+
+  /* ============================================================
+     LEVEL-UP polish (2026-07 restyle) — override layer on top of
+     the Cockpit lime system. VISUAL ONLY. Single accent = lime;
+     P1/P2/P3 red/amber/blue stay as the one functional exception.
+     ============================================================ */
+  :root {                       /* dark base (app default) */
+    --hair-strong: #2f313c;
+    --hm-0: #22242c; --hm-1: #4a5a17; --hm-2: #7f9c1a; --hm-3: #a6cf1f; --hm-4: #c8f000;
+    --ease: cubic-bezier(.16,1,.3,1);
+    --shadow: 0 1px 2px rgba(0,0,0,.42), 0 12px 30px -14px rgba(0,0,0,.62);
+    --shadow-hover: 0 2px 4px rgba(0,0,0,.45), 0 18px 44px -16px rgba(0,0,0,.72);
+    --shadow-hero: 0 1px 2px rgba(0,0,0,.4), 0 24px 60px -22px rgba(150,190,0,.35);
+    --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--lime-deep);
+  }
+  [data-theme="light"] {
+    --hair-strong: #e2e3e6;
+    --hm-0: #e7e8ea; --hm-1: #e6f3a8; --hm-2: #d9ee6e; --hm-3: #d1f23a; --hm-4: #c8f000;
+    --shadow: 0 1px 2px rgba(11,11,13,.04), 0 8px 24px -12px rgba(11,11,13,.14);
+    --shadow-hover: 0 2px 4px rgba(11,11,13,.05), 0 16px 40px -16px rgba(11,11,13,.20);
+    --shadow-hero: 0 1px 2px rgba(96,120,0,.18), 0 20px 50px -20px rgba(120,150,0,.42);
+    --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--lime-deep);
+  }
+
+  /* -- tabular figures everywhere numbers live (stop the jitter) -- */
+  .clock, .stat, .card h2 .count, .task .est, .due-pill, .pri-btn, .flag,
+  li.log-item .log-time, li.log-item .log-mins, .log-summary .ls-pill,
+  .perf-stat .ps-num, .tod-row .tod-val, #volPct, .bulk-count {
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  }
+
+  body { letter-spacing: -0.01em; }
+
+  /* -- keyboard focus rings -- */
+  :focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+  /* -- header + stat chips -- */
+  header h1 { letter-spacing: -0.035em; font-weight: 800; }
+  .stats { margin-top: 16px; gap: 9px; }
+  .stat {
+    padding: 8px 15px; border-color: var(--hair-strong); box-shadow: var(--shadow);
+    transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+  }
+  .stat:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+
+  /* -- cards: softer dual-layer shadow + hover lift + cleaner head -- */
+  .card { border-radius: 18px; border-color: var(--hair-strong); box-shadow: var(--shadow);
+    transition: box-shadow .3s var(--ease); }
+  .card:not(.timer-card):hover { box-shadow: var(--shadow-hover); }
+  .card h2 { font-size: 12px; letter-spacing: .14em; color: var(--muted); align-items: center; }
+  .card h2 .count { border-color: var(--hair-strong); }
+  /* filled count pill on the primary lists reads as lime */
+  #dumpCount, #todayCount { background: var(--lime); color: #0b0b0d; border-color: var(--lime); font-weight: 700; }
+
+  /* -- flat hairline rows: crisp lines, lime hover wash, obvious top task -- */
+  li.task { border-top-color: var(--line); transition: background .18s var(--ease), opacity .15s ease; }
+  li.task:hover { background: color-mix(in srgb, var(--lime) 7%, transparent); }
+  li.task.is-top {
+    border-left-color: var(--lime); border-left-width: 3px;
+    background: color-mix(in srgb, var(--lime) 11%, transparent);
+  }
+  li.task.is-top:hover { background: color-mix(in srgb, var(--lime) 15%, transparent); }
+  .task .label { letter-spacing: -0.01em; }
+  li.task.is-top .label { font-weight: 640; }
+
+  /* -- collapsible chevrons: tidy square hit-area -- */
+  .card.collapsible > h2 .chev {
+    width: 22px; height: 22px; border-radius: 7px; margin-right: 4px;
+    display: inline-grid; place-items: center; color: var(--muted);
+  }
+  .card.collapsible > h2:hover .chev { color: var(--accent); background: var(--panel-2); filter: none; }
+
+  /* -- warmer empty states -- */
+  .empty { border: 1.5px dashed var(--hair-strong); border-radius: 14px; padding: 26px 18px; letter-spacing: -0.005em; }
+
+  /* ---- TIMER HERO: lime band, giant black clock, hairline control shelf ---- */
+  .timer-card { border-radius: 22px; box-shadow: var(--shadow-hero); }
+  .timer-card .t-secondary {           /* the "shelf": modes + sound + volume, divided off the clock */
+    width: 100%; margin-top: 20px; padding-top: 18px;
+    border-top: 1px solid rgba(0,0,0,.16); gap: 14px 22px;
+  }
+  [data-theme="dark"] .timer-card .t-secondary { border-top-color: rgba(0,0,0,.22); }
+  .clock { letter-spacing: -0.05em; }
+  /* confident glyphs on Start / Reset (CSS-only; ⏸ while running via body.zen) */
+  #resetBtn::before { content: "↺\00a0"; font-weight: 800; }
+  #doneBtn { }
+  .timer-card #startBtn::before { content: "▶\00a0"; }
+  body.zen .timer-card #startBtn::before { content: "⏸\00a0"; }
+
+  /* ---- PERFORMANCE heatmap: LIME ramp (removes the old indigo) ---- */
+  .hm-cell { border-radius: 3.5px; border: 1px solid transparent; background: var(--hm-0); }
+  .hm-cell.lvl0 { background: var(--hm-0); border-color: transparent; }
+  .hm-cell.lvl1 { background: var(--hm-1); border-color: transparent; }
+  .hm-cell.lvl2 { background: var(--hm-2); border-color: transparent; }
+  .hm-cell.lvl3 { background: var(--hm-3); border-color: transparent; }
+  .hm-cell.lvl4 { background: var(--hm-4); border-color: transparent; }
+  .hm-legend { gap: 6px; }
+  .tod-row .tod-fill { background: var(--lime); }
+  [data-theme="light"] .tod-row .tod-fill { background: var(--lime-deep); }
+
+  /* -- funnel drop hover uses lime, not the old blue -- */
+  .funnel-drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--lime) 8%, transparent); }
+
+  /* ---- FOOTER + ☁️ SYNC panel: match the refined pill language ---- */
+  footer { padding-top: 4px; }
+  .backup-row button.ghost {
+    background: var(--panel); border: 1px solid var(--hair-strong); color: var(--muted);
+    border-radius: 999px; font-weight: 600; box-shadow: none;
+    transition: color .18s, border-color .18s, transform .18s var(--ease), box-shadow .18s;
+  }
+  .backup-row button.ghost:hover {
+    color: var(--text); border-color: var(--sub); transform: translateY(-1px); box-shadow: var(--shadow); filter: none;
+  }
+  #syncConfig, #feishuConfig, #backupPanel {
+    border-radius: 14px !important; border-color: var(--hair-strong) !important; box-shadow: var(--shadow);
+    background: var(--panel);
+  }
+  #syncConfig input.text, #feishuConfig input.text { background: var(--panel-2); }
+  #syncDot { font-weight: 700; letter-spacing: -0.01em; }
+  #backupList > div { border-top-color: var(--line) !important; }
+
+  /* ---- MOTION: restrained load settle + reduced-motion off-switch ---- */
+  @media (prefers-reduced-motion: no-preference) {
+    .wrap > .card { animation: ffsettle .5s var(--ease) backwards; }
+    .wrap > .card:nth-child(1) { animation-delay: .00s; }
+    .wrap > .card:nth-child(2) { animation-delay: .05s; }
+    .wrap > .card:nth-child(3) { animation-delay: .09s; }
+    .wrap > .card:nth-child(4) { animation-delay: .13s; }
+    .wrap > .card:nth-child(5) { animation-delay: .17s; }
+    .wrap > .card:nth-child(6) { animation-delay: .21s; }
+    .wrap > .card:nth-child(7) { animation-delay: .25s; }
+    .wrap > .card:nth-child(8) { animation-delay: .29s; }
+    @keyframes ffsettle { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
 </style>
 </head>
 <body>
