@@ -4,7 +4,8 @@
 // blocks direct browser calls and needs a SECRET app key. This tiny bridge holds
 // that key (in Cloudflare's encrypted env, never in the app) and exposes two jobs:
 //   GET  /now   -> returns the 🔥 Now tasks           (?secret=SHARED_SECRET)
-//   POST /done  -> marks a task ✅ Done   body: {secret, id}
+//   POST /add   -> quick-capture a new task at ⏭ Next  body: {secret, text}
+//   POST /done  -> marks a task ✅ Done                 body: {secret, id}
 //
 // Required Cloudflare env vars (Settings → Variables and Secrets):
 //   FEISHU_APP_ID       cli_aaa6222524781bef   (plain text — not secret)
@@ -17,6 +18,7 @@ const FEISHU = "https://open.feishu.cn/open-apis";
 const BASE   = "M6iWbxfaBaYoNPs7sxEc4Mv5nLc";
 const TABLE  = "tblWixf6lkHunqPZ";
 const NOW_STATUS  = "🔥 Now";
+const NEXT_STATUS = "⏭ Next";
 const DONE_STATUS = "✅ Done";
 
 function cors() {
@@ -91,6 +93,19 @@ export default {
         return json({ tasks: tasks });
       }
 
+      // ---- POST /add : quick-capture a new task into the Base at ⏭ Next ----
+      if (req.method === "POST" && url.pathname.endsWith("/add")) {
+        const text = String(body.text || "").trim();
+        if (!text) return json({ error: "missing text" }, 400);
+        const r = await fetch(
+          FEISHU + "/bitable/v1/apps/" + BASE + "/tables/" + TABLE + "/records",
+          { method: "POST", headers: H, body: JSON.stringify({ fields: { Task: text, Status: NEXT_STATUS } }) }
+        );
+        const j = await r.json();
+        if (j.code !== 0) throw new Error("add failed: " + (j.msg || j.code));
+        return json({ ok: true, id: j.data && j.data.record && j.data.record.record_id });
+      }
+
       // ---- POST /done : flip a task to ✅ Done ----
       if (req.method === "POST" && url.pathname.endsWith("/done")) {
         if (!body.id) return json({ error: "missing id" }, 400);
@@ -103,7 +118,7 @@ export default {
         return json({ ok: true });
       }
 
-      return json({ error: "unknown route — use GET /now or POST /done" }, 404);
+      return json({ error: "unknown route — use GET /now, POST /add, or POST /done" }, 404);
     } catch (e) {
       return json({ error: String((e && e.message) || e) }, 500);
     }

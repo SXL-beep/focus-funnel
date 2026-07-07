@@ -922,6 +922,12 @@
       conv.title = "Move this note into the Brain Dump as a task";
       conv.addEventListener("click", function () { noteToTask(n.id); });
       el.appendChild(conv);
+      var toFs = document.createElement("button");
+      toFs.className = "mini";
+      toFs.textContent = "☁︎ Feishu";
+      toFs.title = "Send this note to your Feishu to-do (lands at ⏭ Next), then clear it here";
+      toFs.addEventListener("click", function () { noteToFeishu(n.id); });
+      el.appendChild(toFs);
       var x = document.createElement("button");
       x.className = "x"; x.textContent = "×"; x.title = "Delete note";
       x.addEventListener("click", function () { deleteNote(n.id); });
@@ -2669,6 +2675,32 @@
       .catch(function () { /* non-blocking */ });
   }
   window.feishuMoveToDone = feishuMoveToDone; // referenced from finishTopTask
+  // Quick-capture: push a note up to the Feishu Base at ⏭ Next (fast capture).
+  function feishuAdd(text, onOk) {
+    if (!feishuReady()) {
+      setFeishuStatus("Add your bridge URL & password in ⚙ Feishu first");
+      $("feishuConfig").hidden = false; fillFeishuInputs(); return;
+    }
+    text = String(text || "").trim();
+    if (!text) return;
+    setFeishuStatus("Sending to Feishu…");
+    fetch(feishuBase() + "/add", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: state.feishu.secret, text: text })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (res.ok && res.j && res.j.ok) { setFeishuStatus("Sent to Feishu (⏭ Next) ✓"); if (onOk) onOk(); }
+        else setFeishuStatus("Send failed: " + ((res.j && res.j.error) || ("HTTP " + (res.j && res.j.status))));
+      })
+      .catch(function (e) { setFeishuStatus("Send failed (" + e.message + ") — check ⚙ Feishu"); });
+  }
+  function noteToFeishu(id) {
+    var i = indexById(state.notes, id);
+    if (i < 0) return;
+    var text = state.notes[i].text;
+    feishuAdd(text, function () { deleteNote(id); }); // captured in Feishu → clear the scratch note
+  }
+  window.noteToFeishu = noteToFeishu; // referenced from the Notepad render
   $("feishuPullBtn").addEventListener("click", feishuPull);
   $("feishuSetupBtn").addEventListener("click", function () {
     var c = $("feishuConfig"); c.hidden = !c.hidden; if (!c.hidden) fillFeishuInputs();
