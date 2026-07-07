@@ -671,19 +671,6 @@
     <div id="backupList"></div>
   </div>
   <div class="backup-row" style="margin-top:10px">
-    <button class="ghost" id="trelloPullBtn">⤓ Pull from Trello</button>
-    <button class="ghost" id="trelloSetupBtn">⚙ Trello</button>
-    <span class="hint" id="trelloStatus" style="margin-left:6px"></span>
-  </div>
-  <div id="trelloConfig" hidden style="margin:8px 0;padding:10px;border:1px solid var(--line,#333);border-radius:10px;max-width:520px">
-    <div class="hint" style="margin-bottom:6px">Paste your Trello key &amp; token once — they're stored only in this browser, never in the code. The board's list IDs are pre-filled.</div>
-    <input id="trKey" class="text" type="text" placeholder="Trello API key" autocomplete="off" style="margin-bottom:6px" />
-    <input id="trToken" class="text" type="text" placeholder="Trello token" autocomplete="off" style="margin-bottom:6px" />
-    <input id="trPull" class="text" type="text" placeholder="Pull-from list ID (🔥 Now)" autocomplete="off" style="margin-bottom:6px" />
-    <input id="trDone" class="text" type="text" placeholder="Done list ID (✅ Done)" autocomplete="off" style="margin-bottom:6px" />
-    <button id="trSaveBtn">Save</button>
-  </div>
-  <div class="backup-row" style="margin-top:10px">
     <button class="ghost" id="feishuPullBtn">⤓ Pull from Feishu</button>
     <button class="ghost" id="feishuSetupBtn">⚙ Feishu</button>
     <span class="hint" id="feishuStatus" style="margin-left:6px"></span>
@@ -732,7 +719,7 @@
 
   // ---- Persistence ----
   function defaults() {
-    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, collapsed: {}, stats: { dates: {} }, trello: { key: "", token: "", pullListId: "6a2cf9eb49369bd1489095fd", doneListId: "6a2cf9ef81e12acfca28dd3e" }, feishu: { url: "", secret: "" } };
+    return { dump: [], today: [], done: [], sessions: [], notes: [], trash: [], mode: "focus", theme: "dark", soundOn: true, soundType: "brown", breakSound: "ticks", volume: 0.5, collapsed: {}, stats: { dates: {} }, feishu: { url: "", secret: "" } };
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -773,12 +760,6 @@
     if (p.collapsed && typeof p.collapsed === "object") s.collapsed = p.collapsed;
     if (typeof p.volume === "number") s.volume = Math.min(1, Math.max(0, p.volume));
     if (p.stats && p.stats.dates) s.stats.dates = p.stats.dates;
-    if (p.trello && typeof p.trello === "object") {
-      s.trello.key = String(p.trello.key || "");
-      s.trello.token = String(p.trello.token || "");
-      if (p.trello.pullListId) s.trello.pullListId = String(p.trello.pullListId);
-      if (p.trello.doneListId) s.trello.doneListId = String(p.trello.doneListId);
-    }
     if (p.feishu && typeof p.feishu === "object") {
       s.feishu.url = String(p.feishu.url || "");
       s.feishu.secret = String(p.feishu.secret || "");
@@ -805,7 +786,6 @@
       due: (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) ? t.due : null,
       tags: Array.isArray(t.tags) ? parseTags(t.tags.join(" ")) : [],
       expanded: !!t.expanded,
-      trello: (t.trello ? String(t.trello) : null),
       feishu: (t.feishu ? String(t.feishu) : null),
       subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
         return { id: s.id || uid(), text: String(s.text || ""), done: !!s.done };
@@ -2172,7 +2152,6 @@
     t.done = true;
     t.doneDate = todayKey();
     state.done.unshift(t);            // newest first, kept so you can see/restore it
-    if (t.trello) trelloMoveToDone(t.trello);  // tick it off on the shared Trello board
     if (t.feishu) feishuMoveToDone(t.feishu);  // tick it off on the Feishu To-Do board
     // Timer keeps running — render() updates the strip to the next top task.
     save(); render();
@@ -2519,69 +2498,6 @@
     var p = $("backupPanel"); p.hidden = !p.hidden; if (!p.hidden) renderBackups();
   });
 
-  // ---- Trello sync ----
-  // Key + token live only in this browser's localStorage (state.trello), never in the code.
-  function setTrelloStatus(msg) { var s = $("trelloStatus"); if (s) s.textContent = msg || ""; }
-  function trelloReady() { return !!(state.trello && state.trello.key && state.trello.token); }
-  function trelloUrl(path, params) {
-    params = params || {};
-    params.key = state.trello.key; params.token = state.trello.token;
-    var q = Object.keys(params).map(function (k) {
-      return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
-    }).join("&");
-    return "https://api.trello.com/1" + path + "?" + q;
-  }
-  function existingTrelloIds() {
-    var set = {};
-    state.dump.concat(state.today, state.done).forEach(function (t) { if (t.trello) set[t.trello] = 1; });
-    return set;
-  }
-  function fillTrelloInputs() {
-    $("trKey").value = state.trello.key || "";
-    $("trToken").value = state.trello.token || "";
-    $("trPull").value = state.trello.pullListId || "";
-    $("trDone").value = state.trello.doneListId || "";
-  }
-  function trelloPull() {
-    if (!trelloReady()) {
-      setTrelloStatus("Add your Trello key & token in ⚙ Trello first");
-      $("trelloConfig").hidden = false; fillTrelloInputs(); return;
-    }
-    setTrelloStatus("Pulling…");
-    fetch(trelloUrl("/lists/" + state.trello.pullListId + "/cards", { fields: "name" }))
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (cards) {
-        var have = existingTrelloIds(), added = 0;
-        cards.forEach(function (c) {
-          if (have[c.id]) return;
-          state.dump.push({ id: uid(), text: String(c.name || "").trim(), done: false, est: null, pri: null, tags: [], expanded: false, trello: c.id, subtasks: [] });
-          added++;
-        });
-        if (added) { save(); render(); }
-        setTrelloStatus(added ? ("Pulled " + added + " new task" + (added > 1 ? "s" : "") + " from Trello ✓") : "Already up to date ✓");
-      })
-      .catch(function (e) { setTrelloStatus("Trello pull failed (" + e.message + ") — check your key/token"); });
-  }
-  function trelloMoveToDone(cardId) {
-    if (!trelloReady() || !cardId) return;
-    fetch(trelloUrl("/cards/" + cardId, { idList: state.trello.doneListId, pos: "top" }), { method: "PUT" })
-      .then(function (r) { if (r.ok) setTrelloStatus("Ticked off on Trello ✓"); })
-      .catch(function () { /* non-blocking */ });
-  }
-  window.trelloMoveToDone = trelloMoveToDone; // referenced from finishTopTask
-  $("trelloPullBtn").addEventListener("click", trelloPull);
-  $("trelloSetupBtn").addEventListener("click", function () {
-    var c = $("trelloConfig"); c.hidden = !c.hidden; if (!c.hidden) fillTrelloInputs();
-  });
-  $("trSaveBtn").addEventListener("click", function () {
-    state.trello.key = $("trKey").value.trim();
-    state.trello.token = $("trToken").value.trim();
-    state.trello.pullListId = $("trPull").value.trim() || state.trello.pullListId;
-    state.trello.doneListId = $("trDone").value.trim() || state.trello.doneListId;
-    save(); $("trelloConfig").hidden = true;
-    setTrelloStatus(trelloReady() ? "Saved ✓ — hit ⤓ Pull from Trello" : "Saved, but key/token still missing");
-  });
-
   // ---- Cloud sync (whole-state, last-write-wins by timestamp) ----
   // Creds live in a SEPARATE localStorage key, never inside `state`, so they are never
   // overwritten by an incoming synced blob and never pushed to the cloud.
@@ -2619,11 +2535,10 @@
     el.textContent = m[0]; el.style.color = m[1];
   }
 
-  // Serialize state for the cloud MINUS device-local secrets (Trello token, Feishu password).
+  // Serialize state for the cloud MINUS device-local secrets (Feishu password).
   function syncBlobState() {
     var raw;
     try { raw = JSON.parse(JSON.stringify(state)); } catch (e) { raw = {}; }
-    if (raw.trello) { raw.trello.key = ""; raw.trello.token = ""; }
     if (raw.feishu) { raw.feishu.secret = ""; }
     return raw;
   }
@@ -2637,10 +2552,8 @@
   function applyRemote(remoteState) {
     if (shouldBackupBeforeSync()) pushBackup("before sync overwrite");
     suppressPush = true;
-    var keepTrello = { key: state.trello.key, token: state.trello.token };
     var keepFeishu = { url: state.feishu.url, secret: state.feishu.secret };
     state = fromObject(remoteState);
-    state.trello.key = keepTrello.key; state.trello.token = keepTrello.token;
     state.feishu.url = keepFeishu.url; state.feishu.secret = keepFeishu.secret;
     save();  // persist locally; suppressPush stops this from bouncing back to the cloud
     applyTheme(); applySoundLabel(); applySoundControls(); applyCollapsed();
