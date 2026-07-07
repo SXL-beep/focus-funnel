@@ -159,19 +159,18 @@ next top task takes over the running countdown. (It used to reset; users hated t
 - Bump the `STORAGE_KEY` version and add a migration in `loadState()` when the saved
   data shape changes, so existing users don't lose data.
 
-## Trello sync (Sam's shared board)
+## Task sync (Feishu)
 
-- Optional two-way sync with Sam's Trello board "Marlin × Sam — What's Next". Footer has
-  **⤓ Pull from Trello** + **⚙ Trello** (config). Config (`state.trello`: `key`, `token`,
-  `pullListId`, `doneListId`) is entered at runtime and lives ONLY in localStorage —
-  **never hardcode the token; the repo is public on GitHub Pages.** List IDs are pre-filled
-  in `defaults()` (🔥 Now = pull source, ✅ Done = completion target; both non-secret).
-- **Pull:** fetches cards from the Now list and adds any not-yet-imported ones to Brain Dump,
-  stamping each task with its Trello card id (`task.trello`, preserved by `normalizeTask`).
-- **Complete:** `finishTopTask()` calls `trelloMoveToDone(card)` → `PUT /cards/{id}` moving the
-  card to the Done list. Fire-and-forget, non-blocking.
-- Calls go direct from the browser to `api.trello.com` (CORS `allow-origin: *`, works from
-  `file://`). Helpers near the export/import wiring: `trelloPull`, `trelloMoveToDone`, `trelloUrl`.
+- Sam retired Trello entirely on 2026-07-07 — **all Trello code was removed** from `index.html`
+  (the old ⚙ Trello UI, `state.trello`, `trelloPull`/`trelloMoveToDone`/`trelloUrl`). Feishu is
+  now the only task-sync integration. Legacy saved data containing `trello` fields still loads —
+  the fields are silently dropped by `fromObject`/`normalizeTask`.
+- **Feishu sync** (footer **⤓ Pull from Feishu** + **⚙ Feishu**): pulls 🔥 Now tasks into Brain
+  Dump and ticks completed ones ✅ Done, via a tiny Cloudflare "bridge" Worker (`feishu-bridge/
+  worker.js`) that holds the Feishu app key safely. Config (`state.feishu`: `url`, `secret`) is
+  entered at runtime and lives ONLY in localStorage. `task.feishu` stamps the record id.
+- Not to be confused with **☁️ Sync** (whole-state cross-device sync, separate `focus-funnel.sync`
+  key) or **🗄 Backups** (local snapshots) — those are independent systems.
 
 ## Ideas / backlog (not yet built)
 
