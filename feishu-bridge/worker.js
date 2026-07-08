@@ -4,6 +4,7 @@
 // blocks direct browser calls and needs a SECRET app key. This tiny bridge holds
 // that key (in Cloudflare's encrypted env, never in the app) and exposes two jobs:
 //   GET  /now   -> returns the 🔥 Now tasks           (?secret=SHARED_SECRET)
+//   GET  /all   -> returns ALL open tasks (not Done)   (?secret=SHARED_SECRET)
 //   POST /add   -> quick-capture a new task at ⏭ Next  body: {secret, text}
 //   POST /done  -> marks a task ✅ Done                 body: {secret, id}
 //
@@ -93,6 +94,31 @@ export default {
         return json({ tasks: tasks });
       }
 
+      // ---- GET /all : list ALL open tasks (every status except ✅ Done) for the category board ----
+      if (req.method === "GET" && url.pathname.endsWith("/all")) {
+        let items = [], pageToken = "";
+        while (true) {
+          const q = "?page_size=100" + (pageToken ? "&page_token=" + pageToken : "");
+          const r = await fetch(FEISHU + "/bitable/v1/apps/" + BASE + "/tables/" + TABLE + "/records" + q, { headers: H });
+          const j = await r.json();
+          if (j.code !== 0) throw new Error("list failed: " + (j.msg || j.code));
+          items = items.concat((j.data && j.data.items) || []);
+          pageToken = j.data && j.data.page_token;
+          if (!(j.data && j.data.has_more)) break;
+        }
+        const tasks = items
+          .map((it) => ({
+            id: it.record_id,
+            text: sel(it.fields.Task),
+            area: sel(it.fields.Area),
+            pri: sel(it.fields.Priority),
+            status: sel(it.fields.Status),
+            due: it.fields.Due ? new Date(it.fields.Due).toISOString().slice(0, 10) : null,
+          }))
+          .filter((t) => t.text && t.status !== DONE_STATUS);
+        return json({ tasks: tasks });
+      }
+
       // ---- POST /add : quick-capture a new task into the Base at ⏭ Next ----
       if (req.method === "POST" && url.pathname.endsWith("/add")) {
         const text = String(body.text || "").trim();
@@ -118,7 +144,7 @@ export default {
         return json({ ok: true });
       }
 
-      return json({ error: "unknown route — use GET /now, POST /add, or POST /done" }, 404);
+      return json({ error: "unknown route — use GET /now, GET /all, POST /add, or POST /done" }, 404);
     } catch (e) {
       return json({ error: String((e && e.message) || e) }, 500);
     }
