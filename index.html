@@ -643,6 +643,64 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   }
+
+  /* ============================================================
+     COCKPIT layout — ⅓ rail (whole app) + ⅔ Feishu category board.
+     ============================================================ */
+  .wrap { max-width: 1560px; grid-template-columns: minmax(300px, 34%) 1fr; align-items: start; }
+  @media (max-width: 940px) { .wrap { grid-template-columns: 1fr; } }
+  .rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .rail > .card { margin: 0; }
+  #brainDumpCard { display: none; }                 /* Brain Dump retired — the board is the dump */
+  /* clock fits the narrow rail (the full-width 140px would overflow ⅓) */
+  .rail .timer-card { padding: 24px 22px 20px; }
+  .rail .clock { font-size: clamp(52px, 6vw, 76px); }
+  body.zen .rail .clock { font-size: clamp(60px, 7vw, 92px); }
+  .rail .timer-task { font-size: 13.5px; }
+  body.zen .card:not(.timer-card) { opacity: .5; }  /* rail cards fade a bit less (they're the workspace) */
+
+  /* ---- the board ---- */
+  .board { background: var(--panel); border: 1px solid var(--hair-strong); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 18px 18px; min-width: 0; }
+  .board-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+  .board-title { font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+  .board-sp { flex: 1; }
+  .board-groupby-lbl { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+  .live-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; }
+  .live-chip .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .live-chip.off { color: var(--muted); } .live-chip.off .live-dot { background: var(--muted); }
+  .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
+  .seg button { border: none; background: transparent; color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; }
+  .seg button.on { background: var(--lime); color: #0b0b0d; }
+  .board-refresh { padding: 6px 11px; font-size: 13px; border-radius: 999px; }
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 14px; margin-top: 16px; }
+  .cat { background: color-mix(in srgb, var(--muted) 5%, var(--panel)); border: 1px solid var(--line); border-radius: 13px; padding: 12px 12px 8px; }
+  .cat-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .cat-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .cat-name { font-size: 12.5px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .btask { padding: 7px 6px; border-radius: 8px; border-bottom: 1px solid var(--line); }
+  .btask:last-child { border-bottom: none; }
+  .btask:hover { background: color-mix(in srgb, var(--lime) 7%, transparent); }
+  .bt-line { display: flex; align-items: center; gap: 7px; }
+  .stat-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .stat-dot.now { background: var(--accent); } .stat-dot.next { background: var(--muted); } .stat-dot.later { background: transparent; border: 1.5px solid var(--muted); }
+  .bt-title { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 520; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -.01em; }
+  .bt-meta { display: flex; align-items: center; gap: 5px; margin-top: 4px; padding-left: 14px; flex-wrap: wrap; }
+  .bchip { font-size: 10px; font-weight: 600; padding: 1.5px 7px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bchip.now { color: var(--accent); border-color: var(--accent); }
+  .bchip.p1 { color: #ef4444; border-color: rgba(239,68,68,.5); font-weight: 800; }
+  .bchip.p2 { color: #d97706; border-color: rgba(245,158,11,.5); font-weight: 800; }
+  [data-theme="dark"] .bchip.p2 { color: #fbbf24; }
+  .bchip.p3 { color: #3b82f6; border-color: rgba(59,130,246,.5); font-weight: 800; }
+  .bchip.over { color: #ef4444; border-color: rgba(239,68,68,.45); }
+  .bt-actions { margin-top: 6px; display: flex; gap: 5px; opacity: 0; transition: opacity .15s; }
+  .btask:hover .bt-actions { opacity: 1; }
+  @media (hover: none) { .bt-actions { opacity: 1; } }
+  .b-act { border: 1px solid var(--hair-strong); background: var(--panel); color: var(--muted); font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; }
+  .b-act.focus { color: var(--accent); border-color: var(--accent); }
+  .b-act:hover { filter: brightness(1.06); }
+  .board-empty { text-align: center; padding: 34px 18px; color: var(--muted); font-size: 13.5px; }
+  .board-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; text-align: center; }
 </style>
 </head>
 <body>
@@ -660,6 +718,7 @@
 <div class="filter-bar" id="filterBar" hidden></div>
 
 <div class="wrap">
+  <div class="rail">
   <!-- Timer hero -->
   <section class="card timer-card">
     <div class="t-info">
@@ -721,8 +780,8 @@
     </div>
   </section>
 
-  <!-- Brain dump -->
-  <section class="card">
+  <!-- Brain dump (retired in cockpit layout — hidden; Feishu board is the dump) -->
+  <section class="card" id="brainDumpCard">
     <h2>Brain Dump <span class="h2-right"><button class="sort-pri" id="sortPri" title="Sort by priority (P1 first)">⇅ Priority</button><button class="select-toggle" id="selectToggle">☑ Select</button> <span class="count" id="dumpCount">0</span></span></h2>
     <p class="hint">Get every loose thought out of your head. Add <b>#tags</b> (e.g. “Email Sam #work”). Drag the important ones right →</p>
     <div class="add-row">
@@ -793,6 +852,22 @@
     <p class="hint">Deleted tasks rest here for 30 days. <b>↩ Restore</b> brings one back; <b>×</b> removes it forever. · <span class="clear-done" id="emptyTrash" title="Permanently delete everything in the trash">empty trash</span></p>
     <ul class="list" id="trashList"></ul>
     <div class="empty" id="trashEmpty">Trash is empty — deleted tasks will appear here.</div>
+  </section>
+  </div><!-- /.rail -->
+
+  <!-- Feishu category board (read-only mirror of the whole Base) -->
+  <section class="board" id="feishuBoard">
+    <div class="board-top">
+      <span class="board-title">All to-dos · Feishu</span>
+      <span class="live-chip" id="boardStatusChip" hidden><span class="live-dot"></span><span id="boardStatusText"></span></span>
+      <span class="board-sp"></span>
+      <span class="board-groupby-lbl">Group by</span>
+      <span class="seg" id="boardSeg"><button type="button" data-group="area" class="on">Area</button><button type="button" data-group="status">Status</button></span>
+      <button class="ghost board-refresh" id="boardRefresh" title="Refresh from Feishu">⟳</button>
+    </div>
+    <div class="cat-grid" id="boardGrid"></div>
+    <div class="board-empty" id="boardEmpty">Connect Feishu in <b>⚙ Feishu</b> (below) to mirror your whole board here.</div>
+    <div class="board-foot" id="boardFoot" hidden>Read-only · hover a task for <b>▶ Focus</b> / <b>✓ Done</b> · organise the full board in Feishu.</div>
   </section>
 </div>
 
@@ -2847,6 +2922,117 @@
     state.feishu.secret = $("fsSecret").value.trim();
     save(); $("feishuConfig").hidden = true;
     setFeishuStatus(feishuReady() ? "Saved ✓ — hit ⤓ Pull from Feishu" : "Saved, but URL/password still missing");
+    renderBoard(); if (feishuReady()) { boardFetch(); startBoardLoop(); }
+  });
+
+  // ---- Feishu category board (read-only mirror of the whole Base, via GET /all) ----
+  var boardGroupBy = "area";
+  var boardTasks = [];
+  var boardTimer = null;
+  var AREA_COLORS = { Oceanalpha:"#2f7be5", Shopify:"#e0872b", Wholesale:"#3aa17e", Build:"#7a5cd0", Personal:"#d05c86", Health:"#d84d4d", Family:"#c98a20", Faith:"#5a8f2f" };
+  var STATUS_ORDER = ["🔥 Now", "⏭ Next", "🗓 Later"];
+  var FS_PRI_LABEL = { High:"P1", Med:"P2", Low:"P3" }, FS_PRI_CLASS = { High:"p1", Med:"p2", Low:"p3" };
+
+  function boardSetStatus(txt, off) {
+    var chip = $("boardStatusChip"), t = $("boardStatusText");
+    if (!chip) return;
+    if (txt == null) { chip.hidden = true; return; }
+    chip.hidden = false; t.textContent = txt; chip.classList.toggle("off", !!off);
+  }
+  function areaColor(a) { return AREA_COLORS[a] || "var(--muted)"; }
+  function statusMarker(s) { return s === "🔥 Now" ? "now" : (s === "🗓 Later" ? "later" : "next"); }
+
+  function boardFetch() {
+    if (!feishuReady()) { renderBoard(); return; }
+    boardSetStatus("Refreshing…");
+    fetch(feishuBase() + "/all?secret=" + encodeURIComponent(state.feishu.secret))
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (data) {
+        boardTasks = (data && data.tasks) || [];
+        boardSetStatus("Live · " + boardTasks.length + " tasks");
+        renderBoard();
+      })
+      .catch(function () { boardSetStatus("Offline — check ⚙ Feishu", true); });
+  }
+
+  function renderBoard() {
+    var grid = $("boardGrid"), empty = $("boardEmpty"), foot = $("boardFoot");
+    if (!grid) return;
+    if (!feishuReady()) {
+      grid.innerHTML = ""; foot.hidden = true; boardSetStatus(null);
+      empty.hidden = false; empty.innerHTML = "Connect Feishu in <b>⚙ Feishu</b> (below) to mirror your whole board here.";
+      return;
+    }
+    grid.innerHTML = "";
+    if (!boardTasks.length) { foot.hidden = true; empty.hidden = false; empty.textContent = "No open tasks in Feishu right now."; return; }
+    empty.hidden = true; foot.hidden = false;
+    var groups = {};
+    boardTasks.forEach(function (t) {
+      var key = boardGroupBy === "status" ? (t.status || "—") : (t.area || "Uncategorized");
+      (groups[key] = groups[key] || []).push(t);
+    });
+    var keys = Object.keys(groups);
+    if (boardGroupBy === "status") { keys.sort(function (a, b) { return STATUS_ORDER.indexOf(a) - STATUS_ORDER.indexOf(b); }); }
+    else { keys.sort(function (a, b) { if (a === "Uncategorized") return 1; if (b === "Uncategorized") return -1; return groups[b].length - groups[a].length; }); }
+    keys.forEach(function (key) {
+      var list = groups[key].slice().sort(function (a, b) { return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status); });
+      var cat = document.createElement("div"); cat.className = "cat";
+      var head = document.createElement("div"); head.className = "cat-head";
+      var dot = document.createElement("span"); dot.className = "cat-dot";
+      dot.style.background = boardGroupBy === "status" ? (key === "🔥 Now" ? "var(--lime)" : "var(--muted)") : areaColor(key);
+      var name = document.createElement("span"); name.className = "cat-name"; name.textContent = key;
+      var cnt = document.createElement("span"); cnt.className = "cat-count"; cnt.textContent = list.length;
+      head.appendChild(dot); head.appendChild(name); head.appendChild(cnt); cat.appendChild(head);
+      list.forEach(function (t) { cat.appendChild(boardTaskEl(t)); });
+      grid.appendChild(cat);
+    });
+  }
+
+  function boardTaskEl(t) {
+    var el = document.createElement("div"); el.className = "btask";
+    var line = document.createElement("div"); line.className = "bt-line";
+    var sd = document.createElement("span"); sd.className = "stat-dot " + statusMarker(t.status);
+    var title = document.createElement("span"); title.className = "bt-title"; title.textContent = t.text; title.title = t.text;
+    line.appendChild(sd); line.appendChild(title); el.appendChild(line);
+    var meta = document.createElement("div"); meta.className = "bt-meta";
+    if (boardGroupBy === "area") { var st = document.createElement("span"); st.className = "bchip" + (t.status === "🔥 Now" ? " now" : ""); st.textContent = String(t.status || "").replace(/^\S+\s/, "") || t.status; meta.appendChild(st); }
+    else if (t.area) { var ar = document.createElement("span"); ar.className = "bchip"; ar.textContent = t.area; meta.appendChild(ar); }
+    if (t.pri && FS_PRI_CLASS[t.pri]) { var p = document.createElement("span"); p.className = "bchip " + FS_PRI_CLASS[t.pri]; p.textContent = FS_PRI_LABEL[t.pri]; meta.appendChild(p); }
+    if (t.due) { var over = t.due < todayKey(); var due = document.createElement("span"); due.className = "bchip" + (over ? " over" : ""); due.textContent = over ? (fmtDue(t.due) + " · overdue") : fmtDue(t.due); meta.appendChild(due); }
+    if (meta.children.length) el.appendChild(meta);
+    var acts = document.createElement("div"); acts.className = "bt-actions";
+    var focus = document.createElement("button"); focus.type = "button"; focus.className = "b-act focus"; focus.textContent = "▶ Focus";
+    focus.addEventListener("click", function () { boardFocus(t); });
+    var done = document.createElement("button"); done.type = "button"; done.className = "b-act"; done.textContent = "✓ Done";
+    done.addEventListener("click", function () { boardDone(t); });
+    acts.appendChild(focus); acts.appendChild(done); el.appendChild(acts);
+    return el;
+  }
+
+  function boardFocus(t) {
+    if (state.today.concat(state.dump).some(function (x) { return x.feishu === t.id; })) { setFeishuStatus("Already in your list ✓"); return; }
+    if (state.today.length >= MAX_TODAY) { flashFull(); setFeishuStatus("Today is full (max " + MAX_TODAY + ")"); return; }
+    state.today.push({ id: uid(), text: t.text, done: false, est: null, pri: (FS_PRI[t.pri] || null), due: (t.due || null), tags: (t.area ? [String(t.area).toLowerCase()] : []), expanded: false, feishu: t.id, subtasks: [] });
+    save(); render();
+    setFeishuStatus("Pulled “" + t.text.slice(0, 24) + "” into Today ✓");
+  }
+  function boardDone(t) {
+    feishuMoveToDone(t.id);
+    boardTasks = boardTasks.filter(function (x) { return x.id !== t.id; });
+    boardSetStatus("Live · " + boardTasks.length + " tasks");
+    renderBoard();
+    setFeishuStatus("Marked ✅ Done in Feishu ✓");
+  }
+  function startBoardLoop() {
+    if (boardTimer) clearInterval(boardTimer);
+    boardTimer = setInterval(function () { if (!document.hidden && feishuReady() && !timer.running) boardFetch(); }, 30000);
+  }
+  $("boardRefresh").addEventListener("click", boardFetch);
+  $("boardSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    boardGroupBy = b.getAttribute("data-group");
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); });
+    renderBoard();
   });
 
   document.addEventListener("keydown", function (e) {
@@ -2866,6 +3052,7 @@
   paint();
   if (!backupTakenToday()) pushBackup("daily open");   // auto-backup: one snapshot per day
   startSync();   // cloud sync: pull-on-open + start the ~20s periodic pull (no-op unless configured)
+  renderBoard(); if (feishuReady()) { boardFetch(); startBoardLoop(); }  // Feishu category board
 })();
 </script>
 </body>
