@@ -981,6 +981,29 @@
   .bchip.now{ color:var(--g-limeT) !important; }
   .b-act{ font-family:'Space Mono',monospace; font-size:10px !important; border-radius:0 !important;
           border:1px solid var(--g-hair) !important; background:none !important; color:var(--g-muted) !important; }
+  .b-act.dump{ color:var(--g-ink) !important; border-color:var(--g-ink) !important; }
+  .b-act:disabled{ opacity:.45; cursor:default; border-color:var(--g-hair) !important;
+                   color:var(--g-muted) !important; }
+
+  /* already pulled into Today or the dump */
+  .bchip.inlist{ color:var(--g-limeT) !important; }
+  .btask.in-list .bt-title{ opacity:.5; }
+
+  /* batch picker */
+  .board-select.on{ background:var(--g-ink) !important; color:var(--g-surface) !important;
+                    border-color:var(--g-ink) !important; }
+  .board-selbar{ display:flex; align-items:center; gap:10px; padding:12px 0;
+                 border-bottom:1px solid var(--g-hair);
+                 font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.06em;
+                 text-transform:uppercase; color:var(--g-muted); }
+  .board-selbar[hidden]{ display:none; }
+  .bsel-box{ width:14px; height:14px; flex:none; border:1px solid var(--g-hair);
+             display:inline-flex; align-items:center; justify-content:center;
+             font-size:9px; color:var(--g-onLime); margin-right:8px; }
+  .bsel-box.on{ background:var(--g-lime); border-color:var(--g-lime); }
+  .bsel-box.off{ opacity:.3; }
+  .btask.bselectable{ cursor:pointer; }
+  .btask.sel{ background:rgba(190,232,0,.10) !important; }
 
   /* ---- 6. footer ---- */
   footer{
@@ -1296,11 +1319,19 @@
       <span class="board-sp"></span>
       <span class="board-groupby-lbl">Group by</span>
       <span class="seg" id="boardSeg"><button type="button" data-group="area" class="on">Area</button><button type="button" data-group="status">Status</button></span>
+      <button type="button" class="ghost board-select" id="boardSelectBtn" title="Pick several tasks to send to your dump">☑ Select</button>
       <button class="ghost board-refresh" id="boardRefresh" title="Refresh from Feishu">⟳</button>
+    </div>
+    <!-- batch picker: tick tasks, then send the pile to the dump -->
+    <div class="board-selbar" id="boardSelBar" hidden>
+      <span id="boardSelCount">0 selected</span>
+      <span class="board-sp"></span>
+      <button type="button" class="b-act dump" id="boardSendDump" disabled>↓ Send to Dump</button>
+      <button type="button" class="b-act" id="boardSelClear">Clear</button>
     </div>
     <div class="cat-grid" id="boardGrid"></div>
     <div class="board-empty" id="boardEmpty">Connect Feishu in <b>⚙ Feishu</b> (below) to mirror your whole board here.</div>
-    <div class="board-foot" id="boardFoot" hidden>Read-only · hover a task for <b>▶ Focus</b> / <b>✓ Done</b> · organise the full board in Feishu.</div>
+    <div class="board-foot" id="boardFoot" hidden>Read-only mirror · hover a task for <b>▶ Focus</b> / <b>↓ Dump</b> / <b>✓ Done</b> · organise the full board in Feishu.</div>
   </section>
 
   <!-- gallery v3: quiet disclosure for the cards the handoff doesn't show -->
@@ -3477,9 +3508,33 @@
     });
   }
 
+  // batch-picker state — declared here because boardTaskEl() below reads it on every render
+  var boardSelectMode = false, boardSelected = {};
+
+  // already pulled into Today or the dump? (matched by the stamped Feishu record id)
+  function inMyList(t) {
+    return state.today.concat(state.dump).some(function (x) { return x.feishu === t.id; });
+  }
+
   function boardTaskEl(t) {
     var el = document.createElement("div"); el.className = "btask";
+    var already = inMyList(t);
+    if (already) el.classList.add("in-list");
+    if (boardSelectMode && !already) {
+      el.classList.add("bselectable");
+      if (boardSelected[t.id]) el.classList.add("sel");
+      el.addEventListener("click", function (e) {
+        if (e.target.closest(".b-act")) return;   // let the action buttons win
+        toggleBoardSel(t);
+      });
+    }
     var line = document.createElement("div"); line.className = "bt-line";
+    if (boardSelectMode) {
+      var box = document.createElement("span");
+      box.className = "bsel-box" + (boardSelected[t.id] ? " on" : "") + (already ? " off" : "");
+      box.textContent = boardSelected[t.id] ? "✓" : "";
+      line.appendChild(box);
+    }
     var sd = document.createElement("span"); sd.className = "stat-dot " + statusMarker(t.status);
     var title = document.createElement("span"); title.className = "bt-title"; title.textContent = t.text; title.title = t.text;
     line.appendChild(sd); line.appendChild(title); el.appendChild(line);
@@ -3488,13 +3543,18 @@
     else if (t.area) { var ar = document.createElement("span"); ar.className = "bchip"; ar.textContent = t.area; meta.appendChild(ar); }
     if (t.pri && FS_PRI_CLASS[t.pri]) { var p = document.createElement("span"); p.className = "bchip " + FS_PRI_CLASS[t.pri]; p.textContent = FS_PRI_LABEL[t.pri]; meta.appendChild(p); }
     if (t.due) { var over = t.due < todayKey(); var due = document.createElement("span"); due.className = "bchip" + (over ? " over" : ""); due.textContent = over ? (fmtDue(t.due) + " · overdue") : fmtDue(t.due); meta.appendChild(due); }
+    if (already) { var il = document.createElement("span"); il.className = "bchip inlist"; il.textContent = "in list"; meta.appendChild(il); }
     if (meta.children.length) el.appendChild(meta);
     var acts = document.createElement("div"); acts.className = "bt-actions";
     var focus = document.createElement("button"); focus.type = "button"; focus.className = "b-act focus"; focus.textContent = "▶ Focus";
     focus.addEventListener("click", function () { boardFocus(t); });
+    var dump = document.createElement("button"); dump.type = "button"; dump.className = "b-act dump";
+    dump.textContent = already ? "✓ in list" : "↓ Dump";
+    dump.disabled = already;
+    dump.addEventListener("click", function () { boardDump(t); });
     var done = document.createElement("button"); done.type = "button"; done.className = "b-act"; done.textContent = "✓ Done";
     done.addEventListener("click", function () { boardDone(t); });
-    acts.appendChild(focus); acts.appendChild(done); el.appendChild(acts);
+    acts.appendChild(focus); acts.appendChild(dump); acts.appendChild(done); el.appendChild(acts);
     return el;
   }
 
@@ -3505,6 +3565,49 @@
     save(); render();
     setFeishuStatus("Pulled “" + t.text.slice(0, 24) + "” into Today ✓");
   }
+  // ---- Feishu -> dump (local staging only; nothing is written back to Feishu) ----
+  function dumpItemFromBoard(t) {
+    return { id: uid(), text: t.text, done: false, est: null, pri: (FS_PRI[t.pri] || null),
+             due: (t.due || null), tags: (t.area ? [String(t.area).toLowerCase()] : []),
+             expanded: false, feishu: t.id, subtasks: [] };
+  }
+  function boardDump(t) {
+    if (inMyList(t)) { setFeishuStatus("Already in your list ✓"); return; }
+    state.dump.push(dumpItemFromBoard(t));
+    save(); render(); renderBoard();
+    setFeishuStatus("Added “" + t.text.slice(0, 24) + "” to your dump ✓");
+  }
+
+  // ---- batch picker (state declared above boardTaskEl, which reads it) ----
+  function boardSelCount() { return Object.keys(boardSelected).length; }
+  function toggleBoardSel(t) {
+    if (inMyList(t)) return;
+    if (boardSelected[t.id]) delete boardSelected[t.id]; else boardSelected[t.id] = t;
+    renderBoard(); updateBoardSelBar();
+  }
+  function updateBoardSelBar() {
+    var bar = $("boardSelBar"); if (!bar) return;
+    bar.hidden = !boardSelectMode;
+    var n = boardSelCount();
+    $("boardSelCount").textContent = n + " selected";
+    $("boardSendDump").disabled = n === 0;
+    $("boardSendDump").textContent = n > 1 ? ("↓ Send " + n + " to Dump") : "↓ Send to Dump";
+    $("boardSelectBtn").classList.toggle("on", boardSelectMode);
+    $("boardSelectBtn").textContent = boardSelectMode ? "✕ Done" : "☑ Select";
+  }
+  function boardDumpSelected() {
+    var added = 0;
+    Object.keys(boardSelected).forEach(function (k) {
+      var t = boardSelected[k];
+      if (inMyList(t)) return;
+      state.dump.push(dumpItemFromBoard(t)); added++;
+    });
+    boardSelected = {};
+    save(); render(); renderBoard(); updateBoardSelBar();
+    setFeishuStatus(added ? ("Added " + added + " task" + (added === 1 ? "" : "s") + " to your dump ✓")
+                          : "Nothing new to add");
+  }
+
   function boardDone(t) {
     feishuMoveToDone(t.id);
     boardTasks = boardTasks.filter(function (x) { return x.id !== t.id; });
@@ -3517,6 +3620,15 @@
     boardTimer = setInterval(function () { if (!document.hidden && feishuReady() && !timer.running) boardFetch(); }, 30000);
   }
   $("boardRefresh").addEventListener("click", boardFetch);
+  $("boardSelectBtn").addEventListener("click", function () {
+    boardSelectMode = !boardSelectMode;
+    if (!boardSelectMode) boardSelected = {};
+    renderBoard(); updateBoardSelBar();
+  });
+  $("boardSendDump").addEventListener("click", boardDumpSelected);
+  $("boardSelClear").addEventListener("click", function () {
+    boardSelected = {}; renderBoard(); updateBoardSelBar();
+  });
   $("boardSeg").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b) return;
     boardGroupBy = b.getAttribute("data-group");
