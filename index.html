@@ -985,9 +985,9 @@
   .b-act:disabled{ opacity:.45; cursor:default; border-color:var(--g-hair) !important;
                    color:var(--g-muted) !important; }
 
-  /* already pulled into Today or the dump */
-  .bchip.inlist{ color:var(--g-limeT) !important; }
-  .btask.in-list .bt-title{ opacity:.5; }
+  /* NOTE: no "in list" chip / dimming / disabled state on the board. Sam's call: a task that
+     has been sent to the dump must look identical to every other row. Duplicates are stopped
+     silently in boardDump(), with feedback in the Feishu status line rather than on the row. */
 
   /* batch picker */
   .board-select.on{ background:var(--g-ink) !important; color:var(--g-surface) !important;
@@ -1001,7 +1001,6 @@
              display:inline-flex; align-items:center; justify-content:center;
              font-size:9px; color:var(--g-onLime); margin-right:8px; }
   .bsel-box.on{ background:var(--g-lime); border-color:var(--g-lime); }
-  .bsel-box.off{ opacity:.3; }
   .btask.bselectable{ cursor:pointer; }
   .btask.sel{ background:rgba(190,232,0,.10) !important; }
 
@@ -3518,9 +3517,9 @@
 
   function boardTaskEl(t) {
     var el = document.createElement("div"); el.className = "btask";
-    var already = inMyList(t);
-    if (already) el.classList.add("in-list");
-    if (boardSelectMode && !already) {
+    // Sam's call: a dumped task must look EXACTLY like any other row on the board — no chip,
+    // no dimming, no disabled button. Duplicates are stopped silently in boardDump() instead.
+    if (boardSelectMode) {
       el.classList.add("bselectable");
       if (boardSelected[t.id]) el.classList.add("sel");
       el.addEventListener("click", function (e) {
@@ -3531,7 +3530,7 @@
     var line = document.createElement("div"); line.className = "bt-line";
     if (boardSelectMode) {
       var box = document.createElement("span");
-      box.className = "bsel-box" + (boardSelected[t.id] ? " on" : "") + (already ? " off" : "");
+      box.className = "bsel-box" + (boardSelected[t.id] ? " on" : "");
       box.textContent = boardSelected[t.id] ? "✓" : "";
       line.appendChild(box);
     }
@@ -3543,14 +3542,12 @@
     else if (t.area) { var ar = document.createElement("span"); ar.className = "bchip"; ar.textContent = t.area; meta.appendChild(ar); }
     if (t.pri && FS_PRI_CLASS[t.pri]) { var p = document.createElement("span"); p.className = "bchip " + FS_PRI_CLASS[t.pri]; p.textContent = FS_PRI_LABEL[t.pri]; meta.appendChild(p); }
     if (t.due) { var over = t.due < todayKey(); var due = document.createElement("span"); due.className = "bchip" + (over ? " over" : ""); due.textContent = over ? (fmtDue(t.due) + " · overdue") : fmtDue(t.due); meta.appendChild(due); }
-    if (already) { var il = document.createElement("span"); il.className = "bchip inlist"; il.textContent = "in list"; meta.appendChild(il); }
     if (meta.children.length) el.appendChild(meta);
     var acts = document.createElement("div"); acts.className = "bt-actions";
     var focus = document.createElement("button"); focus.type = "button"; focus.className = "b-act focus"; focus.textContent = "▶ Focus";
     focus.addEventListener("click", function () { boardFocus(t); });
     var dump = document.createElement("button"); dump.type = "button"; dump.className = "b-act dump";
-    dump.textContent = already ? "✓ in list" : "↓ Dump";
-    dump.disabled = already;
+    dump.textContent = "↓ Dump";
     dump.addEventListener("click", function () { boardDump(t); });
     var done = document.createElement("button"); done.type = "button"; done.className = "b-act"; done.textContent = "✓ Done";
     done.addEventListener("click", function () { boardDone(t); });
@@ -3581,7 +3578,7 @@
   // ---- batch picker (state declared above boardTaskEl, which reads it) ----
   function boardSelCount() { return Object.keys(boardSelected).length; }
   function toggleBoardSel(t) {
-    if (inMyList(t)) return;
+    // every row is selectable — already-dumped ones are skipped silently on send
     if (boardSelected[t.id]) delete boardSelected[t.id]; else boardSelected[t.id] = t;
     renderBoard(); updateBoardSelBar();
   }
