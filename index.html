@@ -756,6 +756,9 @@
   }
 
   /* ---- page shell: one centered gallery card ---- */
+  /* the legacy `html, body { height:100% }` pinned body to one viewport, so the card
+     background stopped mid-page once html became the grey page colour. */
+  html, body { height:auto !important; }
   html { background:var(--g-app); }
   body {
     background:var(--g-surface); color:var(--g-ink);
@@ -881,6 +884,9 @@
     color:var(--g-muted) !important; text-transform:none; font-weight:400; background:none !important;
   }
   .card .hint{ display:none !important; }
+  /* the Notepad hint explains the → To-do flow — keep it, quietly */
+  #notesCard .hint{ display:block !important; font-family:'Space Mono',monospace;
+    font-size:11px; line-height:1.6; color:var(--g-muted) !important; margin:0 0 14px !important; }
   .funnel-drop{ border:0 !important; padding:0 !important; background:none !important; }
   #today{ counter-reset:tnum; display:flex !important; gap:14px; list-style:none; padding:0; margin:0; flex-wrap:wrap; }
   #today .task{
@@ -952,8 +958,49 @@
   /* design shows plain RESET / FINISH TOP TASK; the ▶ on START is intentional */
   .timer-card #resetBtn::before, .timer-card #doneBtn::before{ content:none !important; }
 
-  /* ---- hidden in the gallery layout (code + data intact, one-line revert) ---- */
-  #brainDumpCard, #notesCard, #doneCard, .perf-card, #logCard, .trash-card{ display:none !important; }
+  /* ---- ambient sound: full-width quiet row under the timer ---- */
+  .t-secondary{ grid-column:1 / -1 !important; grid-row:3 !important; margin-top:26px !important;
+                padding-top:20px !important; border-top:1px solid var(--g-hair) !important; }
+  .sound-row{ display:flex !important; align-items:center; gap:18px; flex-wrap:wrap; }
+  .sound-field{ display:flex; align-items:center; gap:8px; }
+  .sound-lbl{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--g-muted) !important; }
+  .sound-row select{
+    font-family:'Space Mono',monospace; font-size:12px; color:var(--g-ink) !important;
+    background:transparent !important; border:1px solid var(--g-hair) !important;
+    border-radius:0 !important; padding:7px 10px !important;
+  }
+  .sound-row select option{ background:var(--g-surface); color:var(--g-ink); }
+  .timer-card #soundToggle{
+    font-family:'Space Mono',monospace; font-size:12px !important; letter-spacing:.06em;
+    text-transform:uppercase; background:transparent !important; color:var(--g-ink) !important;
+    border:1px solid var(--g-hair) !important; padding:7px 12px !important;
+  }
+  .sound-field.volume{ flex:1 1 180px; max-width:260px; }
+  .timer-card input[type="range"]#volume{
+    accent-color:var(--g-lime); background:var(--g-hair) !important; width:100%;
+  }
+
+  /* ---- Notepad: visible capture surface ---- */
+  #notesCard{ display:block !important; }
+
+  /* ---- "+ MORE" disclosure ---- */
+  .more-row{ padding:20px 0; border-bottom:1px solid var(--g-hair); }
+  .more-toggle{
+    font-family:'Space Mono',monospace; font-size:11px !important; letter-spacing:.1em;
+    text-transform:uppercase; background:none !important; border:0 !important;
+    color:var(--g-muted) !important; padding:0 !important;
+  }
+  .more-toggle:hover{ opacity:.6; }
+
+  /* ---- hidden in the gallery layout (code + data intact — click "+ MORE" to reveal) ---- */
+  #brainDumpCard{ display:none !important; }   /* pre-existing: the Feishu board is the dump */
+  #doneCard, .perf-card, #logCard, .trash-card, header .stats{ display:none !important; }
+  body.show-more #doneCard, body.show-more .perf-card, body.show-more #logCard,
+  body.show-more .trash-card{ display:block !important; }
+  body.show-more header .stats{ display:flex !important; gap:18px; margin-top:18px;
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--g-muted); }
 </style>
 </head>
 <body>
@@ -1008,13 +1055,14 @@
       <button class="ghost" id="resetBtn">Reset</button>
       <button class="ghost" id="doneBtn">✓ Finish top task</button>
       <button id="stopAlarmBtn" hidden>🔕 Stop alarm</button>
+      <!-- gallery v3: duration segmented control lives with the controls (design: under FINISH) -->
+      <div class="mode-pills">
+        <button data-mode="focus" class="active" id="pillfocus" title="Focus 25">25</button>
+        <button data-mode="short" id="pillshort" title="Break 5">5</button>
+        <button data-mode="long" id="pilllong" title="Long 15">15</button>
+      </div>
     </div>
     <div class="t-secondary">
-    <div class="mode-pills">
-      <button data-mode="focus" class="active" id="pillfocus" title="Focus 25">25</button>
-      <button data-mode="short" id="pillshort" title="Break 5">5</button>
-      <button data-mode="long" id="pilllong" title="Long 15">15</button>
-    </div>
     <div class="sound-row">
       <button class="ghost" id="soundToggle">🔊 Sound</button>
       <label class="sound-field">
@@ -1092,6 +1140,11 @@
   </section>
 
   <!-- Done / completed -->
+  <!-- gallery v3: quiet disclosure for the cards the handoff doesn't show -->
+  <div class="more-row">
+    <button id="moreToggle" class="more-toggle" aria-expanded="false">+ MORE</button>
+  </div>
+
   <section class="card done-card collapsible" id="doneCard">
     <h2 data-collapse="done"><span class="chev">▾</span>Done <span class="count" id="doneCount">0</span></h2>
     <p class="hint">Tasks you finished land here, newest first. Hit <b>↩ Restore</b> if you finished one by mistake. · <span class="clear-done" id="clearDone" title="Remove all finished tasks">clear finished</span></p>
@@ -3341,6 +3394,29 @@
   if (!backupTakenToday()) pushBackup("daily open");   // auto-backup: one snapshot per day
   startSync();   // cloud sync: pull-on-open + start the ~20s periodic pull (no-op unless configured)
   renderBoard(); if (feishuReady()) { boardFetch(); startBoardLoop(); }  // Feishu category board
+})();
+</script>
+<script>
+/* gallery v3: "+ MORE" disclosure for Done / Performance / Focus Log / Trash / stats.
+   Standalone on purpose — the main app IIFE is untouched. Choice persists. */
+(function () {
+  "use strict";
+  var KEY = "focus-funnel.showMore";
+  var btn = document.getElementById("moreToggle");
+  if (!btn) return;
+  function apply(on) {
+    document.body.classList.toggle("show-more", on);
+    btn.textContent = on ? "− LESS" : "+ MORE";
+    btn.setAttribute("aria-expanded", on ? "true" : "false");
+  }
+  var saved = false;
+  try { saved = localStorage.getItem(KEY) === "1"; } catch (e) {}
+  apply(saved);
+  btn.addEventListener("click", function () {
+    var on = !document.body.classList.contains("show-more");
+    apply(on);
+    try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (e) {}
+  });
 })();
 </script>
 </body>
