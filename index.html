@@ -899,8 +899,10 @@
   .funnel-drop{ border:0 !important; padding:0 !important; background:none !important; }
   /* FIX 1 (handoff): always exactly 3 fixed slots. A growing flex row made a single task
      stretch full-width and the section reflowed as tasks came and went. */
-  #today{ counter-reset:tnum; display:grid !important; grid-template-columns:repeat(3,1fr);
+  #today{ counter-reset:tnum; display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr));
           gap:14px; list-style:none; padding:0; margin:0; }
+  #today .task, #today .task *{ min-width:0; }
+  #today .task .label{ overflow-wrap:anywhere; }
   @media (max-width:820px){ #today{ grid-template-columns:1fr; } }
   /* dashed placeholder for empty slots (injected by JS, never a blank grid cell) */
   #today .slot-ghost{
@@ -936,21 +938,49 @@
                 color:var(--g-ink) !important; }
   .board-groupby-lbl, .live-chip{ font-family:'Space Mono',monospace; font-size:12px !important;
                 color:var(--g-muted) !important; background:none !important; border:0 !important; }
-  .cat-grid{ grid-template-columns:repeat(3,1fr) !important; gap:14px !important; margin-top:0 !important; }
+  /* FIX: `1fr` grid items default to min-width:auto, so a long task title (e.g. the Sayre one)
+     widened a column and pushed the whole board out past the page card. minmax(0,1fr) + min-width:0
+     lets the columns shrink, and long strings wrap instead of forcing width. */
+  .cat-grid{ grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:14px !important; margin-top:0 !important; }
+  .cat-card, .cat-card *{ min-width:0; }
+  .cat-card .btitle, .cat-card .btask, .cat-card .it, .cat-card .bmeta{ overflow-wrap:anywhere; }
   @media (max-width:820px){ .cat-grid{ grid-template-columns:1fr !important; } }
-  .cat-card{ border:1px solid var(--g-border) !important; background:none !important;
-             padding:18px !important; box-shadow:none !important; }
-  .cat-card .cat-head, .cat-card h3{
-    font-family:'Space Mono',monospace; font-size:12px !important; letter-spacing:.06em;
-    text-transform:uppercase; color:var(--g-ink) !important; margin-bottom:16px !important;
+  /* NOTE: the board's real classes are .cat / .bt-title / .bt-meta (NOT .cat-card / .btitle /
+     .bmeta). An earlier version of this block targeted the wrong names, matched zero elements,
+     and left the whole board in the old rounded Cockpit style while the rest of the page went
+     square and flat. That mismatch is what made the board stick out. */
+  .cat{ border:1px solid var(--g-border) !important; background:none !important;
+        border-radius:0 !important; padding:18px !important; box-shadow:none !important; min-width:0; }
+  .cat-head{ margin-bottom:16px !important; gap:8px; }
+  .cat-dot{ display:none !important; }               /* decorative colour dot, not in the design */
+  .cat-name{
+    font-family:'Space Mono',monospace; font-size:12px !important; font-weight:400 !important;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--g-ink) !important;
   }
-  .cat-card .btask{ margin-bottom:14px; }
-  .cat-card .btask .btitle{ font-size:14px; color:var(--g-list); }
-  .cat-card .bmeta, .cat-card .bchip{
-    font-family:'Space Mono',monospace; font-size:10px !important; letter-spacing:.06em;
-    text-transform:uppercase; color:var(--g-muted) !important; background:none !important;
-    border:0 !important; padding:0 !important; margin-top:3px;
+  .cat-count{ font-family:'Space Mono',monospace; font-size:12px !important;
+              color:var(--g-muted) !important; font-weight:400 !important; }
+  .btask{ padding:0 0 14px !important; margin:0 0 14px !important; border-radius:0 !important;
+          border-bottom:1px solid var(--g-hair) !important; }
+  .btask:last-child{ border-bottom:0 !important; margin-bottom:0 !important; padding-bottom:0 !important; }
+  .btask:hover{ background:none !important; }
+  .bt-line{ gap:0 !important; }
+  .stat-dot{ display:none !important; }              /* decorative status dot */
+  .bt-title{ font-family:'Hanken Grotesk',sans-serif; font-size:14px !important;
+             font-weight:500 !important; color:var(--g-ink) !important; letter-spacing:0 !important;
+             white-space:normal !important; overflow:visible !important; text-overflow:clip !important;
+             overflow-wrap:anywhere; line-height:1.35; }
+  .bt-meta{ padding-left:0 !important; margin-top:3px !important; gap:7px !important; }
+  .bchip{
+    font-family:'Space Mono',monospace; font-size:10px !important; font-weight:400 !important;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--g-muted) !important;
+    background:none !important; border:0 !important; border-radius:0 !important; padding:0 !important;
   }
+  /* priority stays a functional exception, but flat: colour only, no pill */
+  .bchip.p1{ color:#ef4444 !important; } .bchip.p2{ color:#d97706 !important; }
+  .bchip.p3{ color:#3b82f6 !important; } .bchip.over{ color:#ef4444 !important; }
+  .bchip.now{ color:var(--g-limeT) !important; }
+  .b-act{ font-family:'Space Mono',monospace; font-size:10px !important; border-radius:0 !important;
+          border:1px solid var(--g-hair) !important; background:none !important; color:var(--g-muted) !important; }
 
   /* ---- 6. footer ---- */
   footer{
