@@ -961,7 +961,15 @@
   /* ---- ambient sound: full-width quiet row under the timer ---- */
   .t-secondary{ grid-column:1 / -1 !important; grid-row:3 !important; margin-top:26px !important;
                 padding-top:20px !important; border-top:1px solid var(--g-hair) !important; }
-  .sound-row{ display:flex !important; align-items:center; gap:18px; flex-wrap:wrap; }
+  /* sound is collapsible — closed by default, choice remembered */
+  .sound-collapse{
+    font-family:'Space Mono',monospace; font-size:11px !important; letter-spacing:.1em;
+    text-transform:uppercase; background:none !important; border:0 !important;
+    color:var(--g-muted) !important; padding:0 !important;
+  }
+  .sound-collapse:hover{ opacity:.6; }
+  .sound-row{ display:none !important; align-items:center; gap:18px; flex-wrap:wrap; }
+  body.sound-open .sound-row{ display:flex !important; margin-top:16px; }
   .sound-field{ display:flex; align-items:center; gap:8px; }
   .sound-lbl{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.1em;
               text-transform:uppercase; color:var(--g-muted) !important; }
@@ -993,8 +1001,24 @@
   }
   .more-toggle:hover{ opacity:.6; }
 
+  /* ---- Brain Dump: restored as the capture surface (overrides the cockpit-layout hide) ---- */
+  #brainDumpCard{ display:block !important; }
+  #brainDumpCard .hint{ display:block !important; font-family:'Space Mono',monospace;
+    font-size:11px; line-height:1.6; color:var(--g-muted) !important; margin:0 0 14px !important; }
+  /* gallery-styled text inputs (Brain Dump + Notepad) */
+  #brainDumpCard input.text, #notesCard input.text, #brainDumpCard input[type="text"]{
+    font-family:'Hanken Grotesk',sans-serif; font-size:15px; color:var(--g-ink) !important;
+    background:transparent !important; border:1px solid var(--g-hair) !important;
+    border-radius:0 !important; padding:12px 14px !important;
+  }
+  #brainDumpCard input.text::placeholder, #notesCard input.text::placeholder{ color:var(--g-muted); }
+  #brainDumpCard .sort-pri, #brainDumpCard .select-toggle{
+    font-family:'Space Mono',monospace; font-size:11px !important; letter-spacing:.06em;
+    text-transform:uppercase; background:none !important; border:1px solid var(--g-hair) !important;
+    color:var(--g-muted) !important; padding:5px 10px !important; border-radius:0 !important;
+  }
+
   /* ---- hidden in the gallery layout (code + data intact — click "+ MORE" to reveal) ---- */
-  #brainDumpCard{ display:none !important; }   /* pre-existing: the Feishu board is the dump */
   #doneCard, .perf-card, #logCard, .trash-card, header .stats{ display:none !important; }
   body.show-more #doneCard, body.show-more .perf-card, body.show-more #logCard,
   body.show-more .trash-card{ display:block !important; }
@@ -1063,6 +1087,7 @@
       </div>
     </div>
     <div class="t-secondary">
+    <button id="soundCollapseBtn" class="sound-collapse" aria-expanded="false">+ SOUND</button>
     <div class="sound-row">
       <button class="ghost" id="soundToggle">🔊 Sound</button>
       <label class="sound-field">
@@ -3397,26 +3422,30 @@
 })();
 </script>
 <script>
-/* gallery v3: "+ MORE" disclosure for Done / Performance / Focus Log / Trash / stats.
-   Standalone on purpose — the main app IIFE is untouched. Choice persists. */
+/* gallery v3: collapsible sections — "+ MORE" (Done/Performance/Focus Log/Trash/stats)
+   and "+ SOUND" (ambient sound controls). Standalone on purpose: the main app IIFE is
+   untouched. Each choice persists in its own localStorage key. */
 (function () {
   "use strict";
-  var KEY = "focus-funnel.showMore";
-  var btn = document.getElementById("moreToggle");
-  if (!btn) return;
-  function apply(on) {
-    document.body.classList.toggle("show-more", on);
-    btn.textContent = on ? "− LESS" : "+ MORE";
-    btn.setAttribute("aria-expanded", on ? "true" : "false");
+  function wire(btnId, bodyClass, storeKey, labelOpen, labelClosed) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    function apply(on) {
+      document.body.classList.toggle(bodyClass, on);
+      btn.textContent = on ? labelOpen : labelClosed;
+      btn.setAttribute("aria-expanded", on ? "true" : "false");
+    }
+    var saved = false;
+    try { saved = localStorage.getItem(storeKey) === "1"; } catch (e) {}
+    apply(saved);
+    btn.addEventListener("click", function () {
+      var on = !document.body.classList.contains(bodyClass);
+      apply(on);
+      try { localStorage.setItem(storeKey, on ? "1" : "0"); } catch (e) {}
+    });
   }
-  var saved = false;
-  try { saved = localStorage.getItem(KEY) === "1"; } catch (e) {}
-  apply(saved);
-  btn.addEventListener("click", function () {
-    var on = !document.body.classList.contains("show-more");
-    apply(on);
-    try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (e) {}
-  });
+  wire("moreToggle", "show-more", "focus-funnel.showMore", "− LESS", "+ MORE");
+  wire("soundCollapseBtn", "sound-open", "focus-funnel.soundOpen", "− SOUND", "+ SOUND");
 })();
 </script>
 </body>
