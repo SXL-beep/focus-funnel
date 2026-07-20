@@ -1121,6 +1121,15 @@
     color:var(--g-muted) !important; padding:5px 10px !important; border-radius:0 !important;
   }
 
+  /* ---- the "+ MORE" group now sits BELOW the Feishu board, outside .rail, so it no longer
+         matches `.rail > .card` — carry the same flat section styling over to it ---- */
+  #doneCard, .perf-card, #logCard, .trash-card{
+    background:none !important; border:0 !important;
+    border-bottom:1px solid var(--g-hair) !important;
+    padding:26px 0 !important; margin:0 !important; box-shadow:none !important;
+  }
+  .more-row{ margin-top:0; }
+
   /* ---- hidden in the gallery layout (code + data intact — click "+ MORE" to reveal) ---- */
   #doneCard, .perf-card, #logCard, .trash-card, header .stats{ display:none !important; }
   body.show-more #doneCard, body.show-more .perf-card, body.show-more #logCard,
@@ -1277,6 +1286,23 @@
   </section>
 
   <!-- Done / completed -->
+  </div><!-- /.rail -->
+
+  <!-- Feishu category board (read-only mirror of the whole Base) -->
+  <section class="board" id="feishuBoard">
+    <div class="board-top">
+      <span class="board-title">All to-dos · Feishu</span>
+      <span class="live-chip" id="boardStatusChip" hidden><span class="live-dot"></span><span id="boardStatusText"></span></span>
+      <span class="board-sp"></span>
+      <span class="board-groupby-lbl">Group by</span>
+      <span class="seg" id="boardSeg"><button type="button" data-group="area" class="on">Area</button><button type="button" data-group="status">Status</button></span>
+      <button class="ghost board-refresh" id="boardRefresh" title="Refresh from Feishu">⟳</button>
+    </div>
+    <div class="cat-grid" id="boardGrid"></div>
+    <div class="board-empty" id="boardEmpty">Connect Feishu in <b>⚙ Feishu</b> (below) to mirror your whole board here.</div>
+    <div class="board-foot" id="boardFoot" hidden>Read-only · hover a task for <b>▶ Focus</b> / <b>✓ Done</b> · organise the full board in Feishu.</div>
+  </section>
+
   <!-- gallery v3: quiet disclosure for the cards the handoff doesn't show -->
   <div class="more-row">
     <button id="moreToggle" class="more-toggle" aria-expanded="false">+ MORE</button>
@@ -1320,22 +1346,7 @@
     <ul class="list" id="trashList"></ul>
     <div class="empty" id="trashEmpty">Trash is empty — deleted tasks will appear here.</div>
   </section>
-  </div><!-- /.rail -->
 
-  <!-- Feishu category board (read-only mirror of the whole Base) -->
-  <section class="board" id="feishuBoard">
-    <div class="board-top">
-      <span class="board-title">All to-dos · Feishu</span>
-      <span class="live-chip" id="boardStatusChip" hidden><span class="live-dot"></span><span id="boardStatusText"></span></span>
-      <span class="board-sp"></span>
-      <span class="board-groupby-lbl">Group by</span>
-      <span class="seg" id="boardSeg"><button type="button" data-group="area" class="on">Area</button><button type="button" data-group="status">Status</button></span>
-      <button class="ghost board-refresh" id="boardRefresh" title="Refresh from Feishu">⟳</button>
-    </div>
-    <div class="cat-grid" id="boardGrid"></div>
-    <div class="board-empty" id="boardEmpty">Connect Feishu in <b>⚙ Feishu</b> (below) to mirror your whole board here.</div>
-    <div class="board-foot" id="boardFoot" hidden>Read-only · hover a task for <b>▶ Focus</b> / <b>✓ Done</b> · organise the full board in Feishu.</div>
-  </section>
 </div>
 
 <footer>
