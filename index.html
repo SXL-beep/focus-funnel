@@ -812,8 +812,16 @@
 
   /* ---- layout: single centred column ---- */
   .wrap{ display:block !important; max-width:none !important; margin:0 !important; padding:0 !important; grid-template-columns:none !important; }
-  .rail{ display:block !important; gap:0 !important; }
+  /* flex column so the sections can be re-ordered independently of DOM order:
+     timer -> Today -> Brain Dump -> Notepad -> + MORE group */
+  .rail{ display:flex !important; flex-direction:column; gap:0 !important; }
   .rail > .card{ margin:0 !important; }
+  .timer-card{ order:1; }
+  #todayCard{ order:2; }
+  #brainDumpCard{ order:3; }
+  #notesCard{ order:4; }
+  .more-row{ order:5; }
+  #doneCard{ order:6; } .perf-card{ order:7; } #logCard{ order:8; } .trash-card{ order:9; }
 
   /* ---- 3. working-on / timer ---- */
   .timer-card{
@@ -1143,7 +1151,7 @@
   </section>
 
   <!-- Today funnel -->
-  <section class="card">
+  <section class="card" id="todayCard">
     <h2>Today <span class="count" id="todayCount">0 / 3</span></h2>
     <p class="hint">Only 3 fit. Drag to reorder — the highlighted top task is what the timer runs.</p>
     <div class="funnel-drop" id="todayDrop">
