@@ -818,10 +818,11 @@
   .rail > .card{ margin:0 !important; }
   .timer-card{ order:1; }
   #todayCard{ order:2; }
-  #brainDumpCard{ order:3; }
-  #notesCard{ order:4; }
-  .more-row{ order:5; }
-  #doneCard{ order:6; } .perf-card{ order:7; } #logCard{ order:8; } .trash-card{ order:9; }
+  .capture-head{ order:3; }
+  #brainDumpCard{ order:4; }
+  #notesCard{ order:5; }
+  .more-row{ order:6; }
+  #doneCard{ order:7; } .perf-card{ order:8; } #logCard{ order:9; } .trash-card{ order:10; }
 
   /* ---- 3. working-on / timer ---- */
   .timer-card{
@@ -896,9 +897,20 @@
   #notesCard .hint{ display:block !important; font-family:'Space Mono',monospace;
     font-size:11px; line-height:1.6; color:var(--g-muted) !important; margin:0 0 14px !important; }
   .funnel-drop{ border:0 !important; padding:0 !important; background:none !important; }
-  #today{ counter-reset:tnum; display:flex !important; gap:14px; list-style:none; padding:0; margin:0; flex-wrap:wrap; }
+  /* FIX 1 (handoff): always exactly 3 fixed slots. A growing flex row made a single task
+     stretch full-width and the section reflowed as tasks came and went. */
+  #today{ counter-reset:tnum; display:grid !important; grid-template-columns:repeat(3,1fr);
+          gap:14px; list-style:none; padding:0; margin:0; }
+  @media (max-width:820px){ #today{ grid-template-columns:1fr; } }
+  /* dashed placeholder for empty slots (injected by JS, never a blank grid cell) */
+  #today .slot-ghost{
+    border:1px dashed var(--g-hair); padding:16px 18px; display:flex;
+    align-items:center; justify-content:center; min-height:84px;
+    font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--g-muted); text-align:center;
+  }
   #today .task{
-    counter-increment:tnum; flex:1 1 260px; display:block !important;
+    counter-increment:tnum; display:block !important; min-height:84px;
     border:1px solid var(--g-border) !important; background:none !important;
     padding:16px 18px !important; margin:0 !important;
   }
@@ -954,6 +966,36 @@
   footer button:hover{ opacity:.6; }
   footer .fgroup{ display:flex; align-items:center; gap:2px; }
 
+  /* FIX 2 (handoff): "lime is a single flat token." Zen mode dims every card except the timer
+     (opacity .32/.5), and that fade landed on the lime running card, desaturating it to olive.
+     The START button is inside .timer-card so it was excluded, which is exactly why the button
+     looked right and the card did not. Exclude Today from the zen fade. */
+  body.zen #todayCard{ opacity:1 !important; }
+  #today .task.is-top{ opacity:1 !important; filter:none !important; }
+
+  /* ---- Capture: one block, Dump and Notes share it via tabs ---- */
+  .capture-head{ display:flex; align-items:center; justify-content:space-between; gap:14px;
+                 padding:26px 0 0; }
+  .cap-title{ font-family:'Space Mono',monospace; font-size:14px; font-weight:400;
+              letter-spacing:.12em; text-transform:uppercase; color:var(--g-ink); margin:0; }
+  .cap-tabs{ display:inline-flex; border:1px solid var(--g-hair); }
+  .cap-tab{ font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.06em;
+            text-transform:uppercase; padding:7px 13px; border:0 !important;
+            border-left:1px solid var(--g-hair) !important; background:transparent !important;
+            color:var(--g-ink) !important; border-radius:0 !important; }
+  .cap-tab:first-child{ border-left:0 !important; }
+  .cap-tab.on{ background:var(--g-ink) !important; color:var(--g-surface) !important; }
+  .cap-tab span{ opacity:.55; margin-left:5px; }
+  /* the two cards lose their own titles so the block reads as one section (controls kept) */
+  #brainDumpCard h2, #notesCard h2{ font-size:0 !important; justify-content:flex-end;
+                                    margin:0 0 10px !important; }
+  #brainDumpCard h2 > *, #notesCard h2 > *{ font-size:11px !important; }
+  #brainDumpCard, #notesCard{ padding-top:12px !important; border-bottom:1px solid var(--g-hair) !important; }
+  #notesCard{ display:none !important; }
+  body.cap-notes #brainDumpCard{ display:none !important; }
+  body.cap-notes #notesCard{ display:block !important; }
+  body.cap-notes .capture-head{ border-bottom:0; }
+
   /* ---- corrections after in-browser verification ---- */
   .timer-task{ background:none !important; border:0 !important; padding:0 !important; display:block; }
   .card h2 .count{ border:0 !important; background:none !important; padding:0 !important;
@@ -997,8 +1039,8 @@
     accent-color:var(--g-lime); background:var(--g-hair) !important; width:100%;
   }
 
-  /* ---- Notepad: visible capture surface ---- */
-  #notesCard{ display:block !important; }
+  /* ---- Notepad visibility is now owned by the Capture tabs above (do not set display here;
+         an equal-specificity rule down here would override the tab state) ---- */
 
   /* ---- "+ MORE" disclosure ---- */
   .more-row{ padding:20px 0; border-bottom:1px solid var(--g-hair); }
@@ -1139,6 +1181,15 @@
   </section>
 
   <!-- Brain dump (retired in cockpit layout — hidden; Feishu board is the dump) -->
+  <!-- gallery v3: one Capture block; Dump and Notes share it via tabs -->
+  <div class="capture-head">
+    <h3 class="cap-title">Capture</h3>
+    <div class="cap-tabs">
+      <button type="button" class="cap-tab on" data-cap="dump">Dump <span id="capDumpN">0</span></button>
+      <button type="button" class="cap-tab" data-cap="notes">Notes <span id="capNotesN">0</span></button>
+    </div>
+  </div>
+
   <section class="card" id="brainDumpCard">
     <h2>Brain Dump <span class="h2-right"><button class="sort-pri" id="sortPri" title="Sort by priority (P1 first)">⇅ Priority</button><button class="select-toggle" id="selectToggle">☑ Select</button> <span class="count" id="dumpCount">0</span></span></h2>
     <p class="hint">Get every loose thought out of your head. Add <b>#tags</b> (e.g. “Email Sam #work”). Drag the important ones right →</p>
@@ -3454,6 +3505,70 @@
   }
   wire("moreToggle", "show-more", "focus-funnel.showMore", "− LESS", "+ MORE");
   wire("soundCollapseBtn", "sound-open", "focus-funnel.soundOpen", "− SOUND", "+ SOUND");
+
+  /* ---- FIX 1: keep Today at exactly 3 slots, padding empties with dashed placeholders.
+     Done via MutationObserver so the main app's render() stays untouched. Placeholders are
+     NOT .task elements, so dragAfter() ("li.task:not(.dragging)") ignores them entirely. ---- */
+  var todayEl = document.getElementById("today");
+  if (todayEl) {
+    var todayObs = null;
+    function padToday() {
+      var real = todayEl.querySelectorAll("li.task").length;
+      var need = Math.max(0, 3 - real);
+      var ghosts = todayEl.querySelectorAll("li.slot-ghost");
+      var last = todayEl.lastElementChild;
+      var tidy = (need === 0) || (last && last.className === "slot-ghost");
+      // idempotent: bail out when already correct, so we never churn the DOM
+      if (ghosts.length === need && tidy) return;
+      // MutationObserver callbacks are async, so a boolean guard would NOT stop
+      // self-retriggering here. Disconnect around the write instead.
+      if (todayObs) todayObs.disconnect();
+      for (var g = ghosts.length - 1; g >= 0; g--) ghosts[g].remove();
+      for (var i = real; i < 3; i++) {
+        var li = document.createElement("li");
+        li.className = "slot-ghost";
+        li.setAttribute("aria-hidden", "true");
+        li.textContent = "0" + (i + 1) + " · drag a task here";
+        todayEl.appendChild(li);
+      }
+      if (todayObs) todayObs.observe(todayEl, { childList: true });
+    }
+    todayObs = new MutationObserver(padToday);
+    todayObs.observe(todayEl, { childList: true });
+    padToday();
+  }
+
+  /* ---- Capture tabs: Dump / Notes in one block, with live counts ---- */
+  var capBtns = document.querySelectorAll(".cap-tab");
+  if (capBtns.length) {
+    var CAPKEY = "focus-funnel.captureTab";
+    function setCap(which) {
+      document.body.classList.toggle("cap-notes", which === "notes");
+      for (var i = 0; i < capBtns.length; i++) {
+        capBtns[i].classList.toggle("on", capBtns[i].getAttribute("data-cap") === which);
+      }
+      try { localStorage.setItem(CAPKEY, which); } catch (e) {}
+    }
+    for (var b = 0; b < capBtns.length; b++) {
+      capBtns[b].addEventListener("click", function () { setCap(this.getAttribute("data-cap")); });
+    }
+    var saved = "dump";
+    try { saved = localStorage.getItem(CAPKEY) || "dump"; } catch (e) {}
+    setCap(saved);
+
+    // mirror the app's own counters into the tab labels
+    function syncCounts() {
+      var d = document.getElementById("dumpCount"), n = document.getElementById("noteCount");
+      var dn = document.getElementById("capDumpN"), nn = document.getElementById("capNotesN");
+      if (d && dn) dn.textContent = d.textContent.trim();
+      if (n && nn) nn.textContent = n.textContent.trim();
+    }
+    ["dumpCount", "noteCount"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) new MutationObserver(syncCounts).observe(el, { childList: true, characterData: true, subtree: true });
+    });
+    syncCounts();
+  }
 })();
 </script>
 </body>
