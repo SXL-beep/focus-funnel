@@ -106,7 +106,37 @@ sound. Built for personal daily use.
   and the Start button pulses (`.cta`). `breakOverChime` is now unused.
 - **Light / dark theme** toggle.
 
-## Layout (desktop, 2-column grid)
+## ⚠️ CURRENT DESIGN: "Gallery V3" (2026-07-20, branch `redesign/gallery-v3`)
+
+The app now renders the **Gallery V3** design from `~/Downloads/design_handoff_focus_funnel/`
+(README.md is the spec; `main-view-dark.png` the primary reference). This **supersedes the
+Cockpit theme** described further down — that text is kept for history.
+
+- **Look:** near-black "gallery" surface (`#111310` dark / `#F4F3EE` light) floating on a
+  `#C9C8C1` page, one glowing lime accent `#BEE800` (`#A8CE00` for lime-as-text on light),
+  **square corners everywhere**, 1px hairline dividers between sections.
+- **Type:** Hanken Grotesk (display/UI) + Space Mono (all labels, metas, buttons, eyebrows),
+  both **embedded as base64 woff2** in `index.html` — deliberately NOT Google Fonts, because
+  Sam is in China where `fonts.gstatic.com` is commonly blocked and the app must work offline.
+  Cost ≈ +83KB (144KB → 227KB). Hanken is one variable font covering weights 400–800.
+- **Layout:** single centred column, `max-width:1180px`, padding `52/52/40`. Order:
+  top bar (Converge logo + wordmark + real `#syncDot` state) → hero (`Focus Funnel.` 80px,
+  lime period, + funnel swatch row) → timer block (label/task/giant lime clock left,
+  START/RESET/FINISH + `25|5|15` segmented right) → Today (3 cards, top one lime) →
+  All to-dos · Feishu (3-col area board) → footer.
+- **Logo:** "Converge" — three stacked bars of decreasing width → a lime dot. Inline SVG in
+  the top bar (bars use `currentColor`) and in `icon.svg`.
+- **Implementation:** all of it is ONE appended CSS block (`/* GALLERY V3 */`) at the end of
+  `<style>` that overrides the Cockpit theme, plus small markup edits (header, pill labels
+  `25/5/15`, `#syncDot` moved to the top bar). JS logic is untouched except `paint()`, which
+  now wraps the `:` in `<span class="csep">` so digits are lime and the separator is muted.
+- **Hidden, NOT deleted:** Brain Dump, Notepad, Done, Focus Log, Trash and Performance are
+  `display:none` in the gallery layout (last rule of the block). Their markup, JS and
+  **localStorage data are fully intact** — delete that one CSS rule to bring them back.
+  Sam chose "match the design exactly"; hiding rather than deleting keeps his notes,
+  completed history and streak data safe.
+
+## Layout (desktop, 2-column grid) — superseded by Gallery V3 above
 
 Row order in `.wrap`: **Timer hero** (full-width, "Bold Statement" design: vivid indigo→violet
 gradient panel, white 138px clock (190px in zen), task shown as a translucent pill, high-contrast
