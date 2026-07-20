@@ -996,6 +996,29 @@
   body.cap-notes #notesCard{ display:block !important; }
   body.cap-notes .capture-head{ border-bottom:0; }
 
+  /* ---- Today cards: the handoff shows eyebrow + title only. Hide the row controls at rest
+         and reveal them on hover/focus, so drag, complete and priority are all still there.
+         Touch devices have no hover, so they stay visible there. ---- */
+  #today .task .grip,
+  #today .task .task-check,
+  #today .task .expand,
+  #today .task .pri-btn,
+  #today .task .hover-action{ display:none !important; }
+  #today .task:hover .grip,
+  #today .task:hover .task-check,
+  #today .task:hover .expand,
+  #today .task:hover .pri-btn,
+  #today .task:focus-within .grip,
+  #today .task:focus-within .task-check,
+  #today .task:focus-within .expand,
+  #today .task:focus-within .pri-btn{ display:inline-flex !important; }
+  @media (hover:none){
+    #today .task .grip,
+    #today .task .task-check,
+    #today .task .expand,
+    #today .task .pri-btn{ display:inline-flex !important; }
+  }
+
   /* ---- corrections after in-browser verification ---- */
   .timer-task{ background:none !important; border:0 !important; padding:0 !important; display:block; }
   .card h2 .count{ border:0 !important; background:none !important; padding:0 !important;
