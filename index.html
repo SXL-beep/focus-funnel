@@ -459,12 +459,9 @@
 
   /* Zen mode — while the timer runs, the clock grows and the rest fades back */
   header, footer, .card { transition: opacity .4s ease; }
-  body.zen header, body.zen footer,
-  body.zen .card:not(.timer-card) { opacity: .32; }
-  body.zen .card:not(.timer-card):hover { opacity: 1; }
-  body.zen .clock { font-size: 200px; letter-spacing: -.03em; }
-  body.zen .t-secondary { opacity: .7; }
-  @media (max-width: 600px) { body.zen .clock { font-size: 104px; } }
+  /* Zen mode retired (Sam, 2026-07-21): a running timer must not change the page visually —
+     no dimming, no clock growth. body.zen is still set by the JS and is kept ONLY for the
+     Start→⏸ glyph swap below. */
 
   /* Session pills + controls on the lime band (black outline / black-on-lime) */
   .mode-pills {
@@ -669,9 +666,7 @@
   /* clock fits the narrow rail (the full-width 140px would overflow ⅓) */
   .rail .timer-card { padding: 24px 22px 20px; }
   .rail .clock { font-size: clamp(52px, 6vw, 76px); }
-  body.zen .rail .clock { font-size: clamp(60px, 7vw, 92px); }
   .rail .timer-task { font-size: 13.5px; }
-  body.zen .card:not(.timer-card) { opacity: .5; }  /* rail cards fade a bit less (they're the workspace) */
 
   /* ---- the board ---- */
   .board { background: var(--panel); border: 1px solid var(--hair-strong); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 18px 18px; min-width: 0; }
@@ -850,7 +845,6 @@
     -webkit-text-fill-color:var(--g-limeT) !important; margin:0 !important; text-align:left;
   }
   .clock .csep{ color:var(--g-sep) !important; -webkit-text-fill-color:var(--g-sep) !important; }
-  body.zen .clock{ font-size:clamp(120px,17vw,190px) !important; }
 
   .timer-controls button{
     font-family:'Space Mono',monospace; font-size:14px; letter-spacing:.06em;
@@ -922,7 +916,6 @@
   }
   #today .task.is-top{ background:var(--g-lime) !important; border-color:var(--g-lime) !important; }
   #today .task.is-top::before{ content:"01 · TOP"; color:var(--g-onLime); }
-  body.zen #today .task.is-top::before{ content:"01 · TOP · RUNNING"; }
   #today .task .label{ font-size:17px; font-weight:500; color:var(--g-ink); }
   #today .task.is-top .label{ font-weight:700; color:var(--g-onLime) !important; }
   #today .task.is-top .grip, #today .task.is-top .task-check,
@@ -941,10 +934,11 @@
   /* FIX: `1fr` grid items default to min-width:auto, so a long task title (e.g. the Sayre one)
      widened a column and pushed the whole board out past the page card. minmax(0,1fr) + min-width:0
      lets the columns shrink, and long strings wrap instead of forcing width. */
-  .cat-grid{ grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:14px !important; margin-top:0 !important; }
+  /* Sam's call (2026-07-21): each Feishu area spans the FULL width, one per row — not three
+     columns. Collapsed sections then read as a clean stack of full-width header bars. */
+  .cat-grid{ grid-template-columns:1fr !important; gap:14px !important; margin-top:0 !important; }
   .cat-card, .cat-card *{ min-width:0; }
   .cat-card .btitle, .cat-card .btask, .cat-card .it, .cat-card .bmeta{ overflow-wrap:anywhere; }
-  @media (max-width:820px){ .cat-grid{ grid-template-columns:1fr !important; } }
   /* NOTE: the board's real classes are .cat / .bt-title / .bt-meta (NOT .cat-card / .btitle /
      .bmeta). An earlier version of this block targeted the wrong names, matched zero elements,
      and left the whole board in the old rounded Cockpit style while the rest of the page went
@@ -1036,7 +1030,6 @@
      (opacity .32/.5), and that fade landed on the lime running card, desaturating it to olive.
      The START button is inside .timer-card so it was excluded, which is exactly why the button
      looked right and the card did not. Exclude Today from the zen fade. */
-  body.zen #todayCard{ opacity:1 !important; }
   #today .task.is-top{ opacity:1 !important; filter:none !important; }
 
   /* ---- Capture: one block, Dump and Notes share it via tabs ---- */
