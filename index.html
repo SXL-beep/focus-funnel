@@ -958,8 +958,31 @@
   .cat.collapsed .cat-head{ margin-bottom:0 !important; }
   .cat.collapsed > :not(.cat-head){ display:none !important; }
   .cat.collapsed .cat-count{ color:var(--g-limeT) !important; }
-  .board-collapse-all{ font-family:'Space Mono',monospace; font-size:11px !important;
-                       letter-spacing:.06em; text-transform:uppercase; }
+  /* One control size for the whole board header. Previously these three were inconsistent:
+     'Select' inherited the app's big default button (11px 16px padding, Hanken 800),
+     'Collapse all' had mono type but kept that big padding, and '⟳' was a small 999px pill.
+     A fixed height + inline-flex centring makes them line up exactly. */
+  .board-top .ghost, .board-top .seg{
+    height:32px; box-sizing:border-box; border-radius:0 !important;
+    border:1px solid var(--g-hair) !important; background:transparent !important;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:'Space Mono',monospace !important; font-size:11px !important;
+    font-weight:400 !important; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--g-ink) !important; padding:0 12px !important;
+  }
+  .board-top .seg{ padding:0 !important; overflow:hidden; }
+  .board-top .seg button{
+    height:100%; border-radius:0 !important; padding:0 12px !important;
+    font-family:'Space Mono',monospace !important; font-size:11px !important;
+    font-weight:400 !important; letter-spacing:.06em; text-transform:uppercase;
+    border:0 !important; border-left:1px solid var(--g-hair) !important;
+    display:inline-flex; align-items:center;
+  }
+  .board-top .seg button:first-child{ border-left:0 !important; }
+  .board-top .seg button.on{ background:var(--g-lime) !important; color:var(--g-onLime) !important; }
+  .board-top .ghost:hover{ border-color:var(--g-ink) !important; filter:none; }
+  .board-refresh{ font-size:13px !important; padding:0 10px !important; }
+  .board-groupby-lbl{ display:inline-flex; align-items:center; height:32px; }
   .cat-dot{ display:none !important; }               /* decorative colour dot, not in the design */
   .cat-name{
     font-family:'Space Mono',monospace; font-size:12px !important; font-weight:400 !important;
@@ -1037,11 +1060,17 @@
                  padding:26px 0 0; }
   .cap-title{ font-family:'Space Mono',monospace; font-size:14px; font-weight:400;
               letter-spacing:.12em; text-transform:uppercase; color:var(--g-ink); margin:0; }
-  .cap-tabs{ display:inline-flex; border:1px solid var(--g-hair); }
-  .cap-tab{ font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.06em;
-            text-transform:uppercase; padding:7px 13px; border:0 !important;
+  /* same 32px control size as the board header, so every small control matches */
+  .cap-tabs{ display:inline-flex; border:1px solid var(--g-hair); height:32px; box-sizing:border-box; }
+  .cap-tab{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.06em;
+            text-transform:uppercase; padding:0 13px; border:0 !important;
             border-left:1px solid var(--g-hair) !important; background:transparent !important;
-            color:var(--g-ink) !important; border-radius:0 !important; }
+            color:var(--g-ink) !important; border-radius:0 !important;
+            display:inline-flex; align-items:center; }
+  #brainDumpCard .sort-pri, #brainDumpCard .select-toggle{
+    height:32px; box-sizing:border-box; padding:0 12px !important;
+    display:inline-flex; align-items:center; font-size:11px !important;
+  }
   .cap-tab:first-child{ border-left:0 !important; }
   .cap-tab.on{ background:var(--g-ink) !important; color:var(--g-surface) !important; }
   .cap-tab span{ opacity:.55; margin-left:5px; }
