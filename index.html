@@ -951,7 +951,21 @@
      square and flat. That mismatch is what made the board stick out. */
   .cat{ border:1px solid var(--g-border) !important; background:none !important;
         border-radius:0 !important; padding:18px !important; box-shadow:none !important; min-width:0; }
-  .cat-head{ margin-bottom:16px !important; gap:8px; }
+  /* the header is now a button (click to collapse the section) */
+  .cat-head{ margin-bottom:16px !important; gap:8px; display:flex !important; align-items:center;
+             width:100%; background:none !important; border:0 !important; border-radius:0 !important;
+             padding:0 !important; cursor:pointer; text-align:left; }
+  .cat-head:hover .cat-name{ opacity:.65; }
+  .cat-chev{ font-size:9px; line-height:1; color:var(--g-muted); flex:none;
+             transition:transform .15s ease; }
+  .cat.collapsed .cat-chev{ transform:rotate(-90deg); }
+  /* collapsed: keep the header, hide the tasks entirely */
+  .cat.collapsed{ padding-bottom:14px !important; }
+  .cat.collapsed .cat-head{ margin-bottom:0 !important; }
+  .cat.collapsed > :not(.cat-head){ display:none !important; }
+  .cat.collapsed .cat-count{ color:var(--g-limeT) !important; }
+  .board-collapse-all{ font-family:'Space Mono',monospace; font-size:11px !important;
+                       letter-spacing:.06em; text-transform:uppercase; }
   .cat-dot{ display:none !important; }               /* decorative colour dot, not in the design */
   .cat-name{
     font-family:'Space Mono',monospace; font-size:12px !important; font-weight:400 !important;
@@ -1318,6 +1332,7 @@
       <span class="board-sp"></span>
       <span class="board-groupby-lbl">Group by</span>
       <span class="seg" id="boardSeg"><button type="button" data-group="area" class="on">Area</button><button type="button" data-group="status">Status</button></span>
+      <button type="button" class="ghost board-collapse-all" id="boardCollapseAll" title="Hide every section — just the headers">Collapse all</button>
       <button type="button" class="ghost board-select" id="boardSelectBtn" title="Pick several tasks to send to your dump">☑ Select</button>
       <button class="ghost board-refresh" id="boardRefresh" title="Refresh from Feishu">⟳</button>
     </div>
@@ -3435,6 +3450,17 @@
 
   // ---- Feishu category board (read-only mirror of the whole Base, via GET /all) ----
   var boardGroupBy = "area";
+
+  // ---- collapsible board sections. Declared here because renderBoard() below reads it.
+  //      Kept OUT of `state` deliberately: this is a per-device view preference, so it must
+  //      never ride along with cloud sync or land in a backup snapshot. ----
+  var CATKEY = "focus-funnel.boardCollapsed";
+  var catCollapsed = {};
+  try { catCollapsed = JSON.parse(localStorage.getItem(CATKEY) || "{}") || {}; } catch (e) { catCollapsed = {}; }
+  // grouping by area vs status yields different key sets, so namespace them
+  function catKey(key) { return boardGroupBy + "::" + key; }
+  function isCatCollapsed(key) { return !!catCollapsed[catKey(key)]; }
+  function saveCats() { try { localStorage.setItem(CATKEY, JSON.stringify(catCollapsed)); } catch (e) {} }
   var boardTasks = [];
   var boardTimer = null;
   var AREA_COLORS = { Oceanalpha:"#2f7be5", Shopify:"#e0872b", Wholesale:"#3aa17e", Build:"#7a5cd0", Personal:"#d05c86", Health:"#d84d4d", Family:"#c98a20", Faith:"#5a8f2f" };
@@ -3485,12 +3511,20 @@
     keys.forEach(function (key) {
       var list = groups[key].slice().sort(function (a, b) { return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status); });
       var cat = document.createElement("div"); cat.className = "cat";
-      var head = document.createElement("div"); head.className = "cat-head";
+      var collapsed = isCatCollapsed(key);
+      if (collapsed) cat.classList.add("collapsed");
+      var head = document.createElement("button");
+      head.type = "button"; head.className = "cat-head";
+      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      head.title = collapsed ? "Show these tasks" : "Hide these tasks";
+      var chev = document.createElement("span"); chev.className = "cat-chev"; chev.textContent = "▾";
       var dot = document.createElement("span"); dot.className = "cat-dot";
       dot.style.background = boardGroupBy === "status" ? (key === "🔥 Now" ? "var(--lime)" : "var(--muted)") : areaColor(key);
       var name = document.createElement("span"); name.className = "cat-name"; name.textContent = key;
       var cnt = document.createElement("span"); cnt.className = "cat-count"; cnt.textContent = list.length;
-      head.appendChild(dot); head.appendChild(name); head.appendChild(cnt); cat.appendChild(head);
+      head.appendChild(chev); head.appendChild(dot); head.appendChild(name); head.appendChild(cnt);
+      head.addEventListener("click", function () { toggleCat(key); });
+      cat.appendChild(head);
       var CAP = 8;
       list.forEach(function (t, i) { var el = boardTaskEl(t); if (i >= CAP) el.classList.add("extra"); cat.appendChild(el); });
       if (list.length > CAP) {
@@ -3505,10 +3539,39 @@
       }
       grid.appendChild(cat);
     });
+    updateCatAllBtn();
   }
 
   // batch-picker state — declared here because boardTaskEl() below reads it on every render
   var boardSelectMode = false, boardSelected = {};
+
+  function toggleCat(key) {
+    var k = catKey(key);
+    if (catCollapsed[k]) delete catCollapsed[k]; else catCollapsed[k] = 1;
+    saveCats(); renderBoard(); updateCatAllBtn();
+  }
+  function currentCatKeys() {
+    return Array.prototype.map.call(document.querySelectorAll("#boardGrid .cat .cat-name"),
+      function (n) { return n.textContent; });
+  }
+  function allCatsCollapsed() {
+    var keys = currentCatKeys();
+    return keys.length > 0 && keys.every(function (k) { return isCatCollapsed(k); });
+  }
+  function updateCatAllBtn() {
+    var b = $("boardCollapseAll"); if (!b) return;
+    var all = allCatsCollapsed();
+    b.textContent = all ? "Expand all" : "Collapse all";
+    b.title = all ? "Show every section" : "Hide every section — just the headers";
+  }
+  function toggleAllCats() {
+    var keys = currentCatKeys(); if (!keys.length) return;
+    var collapseThem = !allCatsCollapsed();
+    keys.forEach(function (k) {
+      if (collapseThem) catCollapsed[catKey(k)] = 1; else delete catCollapsed[catKey(k)];
+    });
+    saveCats(); renderBoard(); updateCatAllBtn();
+  }
 
   // already pulled into Today or the dump? (matched by the stamped Feishu record id)
   function inMyList(t) {
@@ -3622,6 +3685,7 @@
     if (!boardSelectMode) boardSelected = {};
     renderBoard(); updateBoardSelBar();
   });
+  $("boardCollapseAll").addEventListener("click", toggleAllCats);
   $("boardSendDump").addEventListener("click", boardDumpSelected);
   $("boardSelClear").addEventListener("click", function () {
     boardSelected = {}; renderBoard(); updateBoardSelBar();
