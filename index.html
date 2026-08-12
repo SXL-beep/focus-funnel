@@ -444,13 +444,6 @@
   }
   .clock.break { color: #0b0b0d; }
   .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-start; margin-top: 8px; }
-  /* Ringing (end-of-phase alarm) state */
-  .ring-banner { color: #0b0b0d; font-weight: 800; font-size: 15px; }
-  body.ringing .ring-banner { animation: ringpulse 1s ease-in-out infinite; }
-  @keyframes ringpulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
-  #stopAlarmBtn { background: #0b0b0d; color: var(--lime); font-weight: 800; }
-  #startBtn.cta { box-shadow: 0 0 0 3px rgba(0,0,0,.18); animation: ctapulse 1.4s ease-in-out infinite; }
-  @keyframes ctapulse { 0%,100% { box-shadow: 0 0 0 3px rgba(0,0,0,.18); } 50% { box-shadow: 0 0 0 7px rgba(0,0,0,.10); } }
   .t-secondary {
     display: flex; gap: 16px; align-items: center; justify-content: flex-start;
     flex-wrap: wrap; margin-top: 14px;
@@ -1248,7 +1241,6 @@
       <button id="startBtn">Start</button>
       <button class="ghost" id="resetBtn">Reset</button>
       <button class="ghost" id="doneBtn">✓ Finish top task</button>
-      <button id="stopAlarmBtn" hidden>🔕 Stop alarm</button>
       <!-- gallery v3: duration segmented control lives with the controls (design: under FINISH) -->
       <div class="mode-pills">
         <button data-mode="focus" class="active" id="pillfocus" title="Focus 25">25</button>
@@ -2535,9 +2527,11 @@
     $("timerTask").textContent = t.text + (t.est ? "  · ~" + t.est + "m" : "") + (t.done ? "  ✓" : "");
   }
 
-  function setMode(mode) {
-    state.mode = mode; save();
-    stopAlarm();
+  function setMode(mode, persist) {
+    state.mode = mode;
+    // Boot only needs to paint the saved mode. Saving during boot would give stale
+    // local data a fresh sync timestamp before the initial cloud pull.
+    if (persist !== false) save();
     stopTimer();
     timer.remaining = MODES[mode];
     ["focus", "short", "long"].forEach(function (m) {
@@ -2559,7 +2553,6 @@
   }
   function startTimer() {
     if (timer.running) return;
-    stopAlarm();
     if (timer.remaining <= 0) timer.remaining = MODES[state.mode];
     timer.running = true; $("startBtn").textContent = "Pause";
     timer.intervalId = setInterval(tick, 1000);
@@ -2575,33 +2568,7 @@
   }
   function stopTimer() { pauseTimer(); }
   function toggleTimer() { timer.running ? pauseTimer() : startTimer(); }
-  function resetTimer() { stopTimer(); stopAlarm(); timer.remaining = MODES[state.mode]; paint(); }
-
-  // ---- Persistent end-of-phase alarm — rings until you press Start or Stop ----
-  var alarmTimer = null;
-  function startAlarm(msg) {
-    stopAlarm();
-    alarm();
-    var count = 1;
-    alarmTimer = setInterval(function () {
-      alarm();
-      if (++count >= 75) stopAlarm();   // ~5 min safety cap (75 × 4s) if you've walked away
-    }, 4000);
-    document.body.classList.add("ringing");
-    var top = $("timerTop");
-    top.textContent = msg;
-    top.classList.add("ring-banner");
-    $("stopAlarmBtn").hidden = false;
-    $("startBtn").classList.add("cta");
-  }
-  function stopAlarm() {
-    if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; }
-    document.body.classList.remove("ringing");
-    var top = $("timerTop"); if (top) top.classList.remove("ring-banner");
-    var sb = $("stopAlarmBtn"); if (sb) sb.hidden = true;
-    var st = $("startBtn"); if (st) st.classList.remove("cta");
-    updateTimerTask();
-  }
+  function resetTimer() { stopTimer(); timer.remaining = MODES[state.mode]; paint(); }
 
   function finishTimer() {
     pauseTimer();
@@ -2610,10 +2577,12 @@
       recordSession(Math.round(MODES.focus / 60), top ? top.text : "");
       save(); render();                 // log it + refresh stats/log
       setMode("short");                 // ready the break — you press Start
-      startAlarm("⏰ Focus done — press Start to begin your break");
+      alarm();                           // one alert only; no repeating loop
+      flashBanner("Focus done — press Start to begin your break");
     } else {
       setMode("focus");                 // ready the next focus — you press Start
-      startAlarm("⏰ Break over — press Start for your next focus!");
+      breakOverChime();                  // one short chime only
+      flashBanner("Break over — press Start for your next focus!");
     }
   }
   function flashBanner(msg) { $("timerTop").textContent = msg; setTimeout(updateTimerTask, 4000); }
@@ -3077,7 +3046,6 @@
   $("startBtn").addEventListener("click", toggleTimer);
   $("resetBtn").addEventListener("click", resetTimer);
   $("doneBtn").addEventListener("click", finishTopTask);
-  $("stopAlarmBtn").addEventListener("click", stopAlarm);
   $("themeToggle").addEventListener("click", toggleTheme);
   $("soundToggle").addEventListener("click", toggleSound);
   $("soundType").addEventListener("change", changeSoundType);
@@ -3356,6 +3324,10 @@
         if (remoteAt > localUpdatedAt) {
           applyRemote(blob.state);
           localUpdatedAt = remoteAt; saveSyncMeta();
+        } else if (localUpdatedAt > remoteAt) {
+          // A previous push may have failed while offline. Retry the newer local
+          // state instead of waiting for another edit to trigger a push.
+          pushNow(); return;
         }
         setSyncStatus("synced");
       })
@@ -3731,7 +3703,7 @@
   applySoundLabel();
   applySoundControls();
   applyCollapsed();
-  setMode(state.mode);
+  setMode(state.mode, false);  // paint only; compare with cloud before any save/push
   render();
   paint();
   if (!backupTakenToday()) pushBackup("daily open");   // auto-backup: one snapshot per day
